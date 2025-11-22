@@ -110,9 +110,10 @@ class LectureHall
 public:
     int roomId;
     int roomNumber;
+    CampusBlock *building; // Aggregation relationship
 
-    LectureHall() : roomId(0), roomNumber(0) {}
-    LectureHall(int id, int num) : roomId(id), roomNumber(num) {}
+    LectureHall() : roomId(0), roomNumber(0), building(nullptr) {}
+    LectureHall(int id, int num, CampusBlock *bldg) : roomId(id), roomNumber(num), building(bldg) {}
 };
 
 // Renamed to UniversityTeacher to avoid collision with the 'Instructor' Person class
@@ -204,15 +205,15 @@ public:
 class MakeupLabRequest
 {
 public:
-    int labId;
+    CourseLaboratory *lab; // Pointer to CourseLaboratory
     string sectionName;
     string requestedStartTime;
     string requestedEndTime;
     string requestedDate;
 
-    MakeupLabRequest() : labId(0) {}
-    MakeupLabRequest(int id, const string &sec, const string &date, const string &start, const string &end)
-        : labId(id), sectionName(sec), requestedDate(date), requestedStartTime(start), requestedEndTime(end) {}
+    MakeupLabRequest() : lab(nullptr) {}
+    MakeupLabRequest(CourseLaboratory *l, const string &sec, const string &date, const string &start, const string &end)
+        : lab(l), sectionName(sec), requestedDate(date), requestedStartTime(start), requestedEndTime(end) {}
 };
 
 // DETAILS INTERFACES
@@ -318,8 +319,10 @@ public:
         }
         if (rooms.empty())
         {
-            rooms.push_back(LectureHall(101, 101));
-            rooms.push_back(LectureHall(102, 102));
+            // Room 101 belongs to CS Block (ID: 1)
+            rooms.push_back(LectureHall(101, 101, &buildings[0]));
+            // Room 102 belongs to EE Block (ID: 2)
+            rooms.push_back(LectureHall(102, 102, &buildings[1]));
         }
     }
 };
@@ -758,7 +761,7 @@ public:
 class AcademicOfficer : public Person
 {
 private:
-    vector<MakeupLabRequest> ReadMakeupRequestsFromBinary()
+    vector<MakeupLabRequest> ReadMakeupRequestsFromBinary(LabDetails *lDetails)
     {
         vector<MakeupLabRequest> requests;
         ifstream in("makeup_requests.dat", ios::binary);
@@ -773,9 +776,13 @@ private:
             MakeupLabRequest request;
             
             // Read labId
-            in.read(reinterpret_cast<char *>(&request.labId), sizeof(int));
+            int labId;
+            in.read(reinterpret_cast<char *>(&labId), sizeof(int));
             if (in.eof())
                 break;
+            
+            // Find the lab by ID and set the pointer
+            request.lab = lDetails->FindLab(labId);
             
             // Read sectionName
             int secLen;
@@ -828,9 +835,49 @@ private:
         return requests;
     }
 
-    void ViewMakeupRequests()
+    void WriteMakeupRequestsToBinary(const vector<MakeupLabRequest> &requests)
     {
-        vector<MakeupLabRequest> requests = ReadMakeupRequestsFromBinary();
+        // Open file in truncate mode to overwrite existing content
+        ofstream out("makeup_requests.dat", ios::binary | ios::trunc);
+        if (!out.is_open())
+        {
+            cout << "Error: Could not write to makeup requests file.\n";
+            return;
+        }
+
+        for (const auto &request : requests)
+        {
+            // Write labId (from the pointer)
+            int labId = (request.lab ? request.lab->labId : -1);
+            out.write(reinterpret_cast<const char *>(&labId), sizeof(int));
+            
+            // Write sectionName length and string
+            int secLen = request.sectionName.length();
+            out.write(reinterpret_cast<const char *>(&secLen), sizeof(int));
+            out.write(request.sectionName.c_str(), secLen);
+            
+            // Write requestedDate length and string
+            int dateLen = request.requestedDate.length();
+            out.write(reinterpret_cast<const char *>(&dateLen), sizeof(int));
+            out.write(request.requestedDate.c_str(), dateLen);
+            
+            // Write requestedStartTime length and string
+            int startLen = request.requestedStartTime.length();
+            out.write(reinterpret_cast<const char *>(&startLen), sizeof(int));
+            out.write(request.requestedStartTime.c_str(), startLen);
+            
+            // Write requestedEndTime length and string
+            int endLen = request.requestedEndTime.length();
+            out.write(reinterpret_cast<const char *>(&endLen), sizeof(int));
+            out.write(request.requestedEndTime.c_str(), endLen);
+        }
+        
+        out.close();
+    }
+
+    void ViewMakeupRequests(LabDetails *lDetails)
+    {
+        vector<MakeupLabRequest> requests = ReadMakeupRequestsFromBinary(lDetails);
         
         if (requests.empty())
         {
@@ -839,13 +886,15 @@ private:
         }
         
         cout << "\n--- MAKEUP LAB REQUESTS ---\n";
-        cout << left << setw(8) << "Lab ID" << setw(12) << "Section" << setw(15) << "Date" 
+        cout << left << setw(8) << "Lab ID" << setw(15) << "Course Code" << setw(12) << "Section" << setw(15) << "Date" 
              << setw(12) << "Start Time" << setw(12) << "End Time" << endl;
-        cout << string(60, '-') << endl;
+        cout << string(80, '-') << endl;
         
         for (const auto &req : requests)
         {
-            cout << left << setw(8) << req.labId << setw(12) << req.sectionName 
+            int labId = (req.lab ? req.lab->labId : -1);
+            string courseCode = (req.lab ? req.lab->courseCode : "N/A");
+            cout << left << setw(8) << labId << setw(15) << courseCode << setw(12) << req.sectionName 
                  << setw(15) << req.requestedDate << setw(12) << req.requestedStartTime 
                  << setw(12) << req.requestedEndTime << endl;
         }
@@ -853,7 +902,7 @@ private:
 
     void ScheduleMakeupLab(LabDetails *lDetails, VenueDetails *vDetails, FacultyDetails *fDetails)
     {
-        vector<MakeupLabRequest> requests = ReadMakeupRequestsFromBinary();
+        vector<MakeupLabRequest> requests = ReadMakeupRequestsFromBinary(lDetails);
         
         if (requests.empty())
         {
@@ -864,7 +913,9 @@ private:
         cout << "\n--- AVAILABLE MAKEUP REQUESTS ---\n";
         for (size_t i = 0; i < requests.size(); i++)
         {
-            cout << (i + 1) << ". Lab ID: " << requests[i].labId 
+            int labId = (requests[i].lab ? requests[i].lab->labId : -1);
+            string courseCode = (requests[i].lab ? requests[i].lab->courseCode : "N/A");
+            cout << (i + 1) << ". Lab ID: " << labId << " (" << courseCode << ")"
                  << ", Section: " << requests[i].sectionName 
                  << ", Date: " << requests[i].requestedDate
                  << ", Time: " << requests[i].requestedStartTime 
@@ -905,6 +956,18 @@ private:
             cout << "Error: Invalid Teacher, Building, or Room ID.\n";
             return;
         }
+
+        // Validate that the room belongs to the specified building
+        if (room->building == nullptr || room->building->buildingId != build->buildingId)
+        {
+            cout << "Error: Room ID " << rId << " does not belong to Building ID " << bId << ".\n";
+            if (room->building)
+            {
+                cout << "Room " << rId << " belongs to Building ID " << room->building->buildingId 
+                     << " (" << room->building->name << ").\n";
+            }
+            return;
+        }
         
         // Create new section for makeup lab
         ClassSection makeupSec;
@@ -923,19 +986,17 @@ private:
                 makeupSec.AddTA(ta);
         }
         
-        CourseLaboratory *lab = lDetails->FindLab(selected.labId);
-        if (lab)
-        {
-            lab->AddSection(makeupSec);
-            lDetails->UpdateLab(*lab);
-        }
-        else
-        {
-            cout << "Error: Original lab not found.\n";
-            return;
-        }
+        // Use the lab pointer directly from the request
+        selected.lab->AddSection(makeupSec);
+        lDetails->UpdateLab(*selected.lab);
         
-        cout << "Makeup lab scheduled successfully.\n";
+        // Remove the fulfilled request from the list
+        requests.erase(requests.begin() + (choice - 1));
+        
+        // Rewrite the binary file without the fulfilled request
+        WriteMakeupRequestsToBinary(requests);
+        
+        cout << "Makeup lab scheduled successfully and request removed from pending requests.\n";
     }
 
     void ViewCompleteLabDetails(LabDetails *lDetails, VenueDetails *vDetails, FacultyDetails *fDetails)
@@ -1050,10 +1111,35 @@ private:
         InputOutput::SafeReadInt(rId);
         cout << "Day: ";
         InputOutput::SafeReadString(day);
-        cout << "Start (HH:MM): ";
-        InputOutput::SafeReadString(s);
-        cout << "End (HH:MM): ";
-        InputOutput::SafeReadString(e);
+        
+        // Validate start time format
+        do
+        {
+            cout << "Start (HH:MM): ";
+            InputOutput::SafeReadString(s);
+            if (!DataValidator::IsValidTime(s))
+            {
+                cout << "Error: Invalid time format. Please use HH:MM format (e.g., 09:30, 14:00).\n";
+            }
+        } while (!DataValidator::IsValidTime(s));
+        
+        // Validate end time format
+        do
+        {
+            cout << "End (HH:MM): ";
+            InputOutput::SafeReadString(e);
+            if (!DataValidator::IsValidTime(e))
+            {
+                cout << "Error: Invalid time format. Please use HH:MM format (e.g., 09:30, 14:00).\n";
+            }
+        } while (!DataValidator::IsValidTime(e));
+        
+        // Validate start time < end time
+        if (!DataValidator::IsStartBeforeEnd(s, e))
+        {
+            cout << "Error: Start time must be before end time.\n";
+            return;
+        }
 
         UniversityTeacher *teach = fDetails->FindTeacher(teacherId);
         CampusBlock *build = vDetails->FindBuilding(bId);
@@ -1062,6 +1148,18 @@ private:
         if (!teach || !build || !room)
         {
             cout << "Error: Invalid Teacher, Building, or Room ID.\n";
+            return;
+        }
+
+        // Validate that the room belongs to the specified building
+        if (room->building == nullptr || room->building->buildingId != build->buildingId)
+        {
+            cout << "Error: Room ID " << rId << " does not belong to Building ID " << bId << ".\n";
+            if (room->building)
+            {
+                cout << "Room " << rId << " belongs to Building ID " << room->building->buildingId 
+                     << " (" << room->building->name << ").\n";
+            }
             return;
         }
 
@@ -1113,7 +1211,7 @@ public:
             else if (choice == 2)
                 ScheduleSection(lDetails, vDetails, fDetails);
             else if (choice == 3)
-                ViewMakeupRequests();
+                ViewMakeupRequests(lDetails);
             else if (choice == 4)
                 ScheduleMakeupLab(lDetails, vDetails, fDetails);
             else
@@ -1130,8 +1228,9 @@ private:
         ofstream out("makeup_requests.dat", ios::binary | ios::app);
         if (out.is_open())
         {
-            // Write labId
-            out.write(reinterpret_cast<const char *>(&request.labId), sizeof(int));
+            // Write labId (from the pointer)
+            int labId = (request.lab ? request.lab->labId : -1);
+            out.write(reinterpret_cast<const char *>(&labId), sizeof(int));
             
             // Write sectionName length and string
             int secLen = request.sectionName.length();
@@ -1175,7 +1274,7 @@ private:
         }
 
         // Create and save makeup request to binary file
-        MakeupLabRequest request(labId, secName, date, s, e);
+        MakeupLabRequest request(l, secName, date, s, e);
         SaveMakeupRequestToBinary(request);
         cout << "Makeup Lab Request submitted successfully.\n";
     }
@@ -1200,10 +1299,36 @@ public:
                 InputOutput::SafeReadString(sec);
                 cout << "Requested Date: ";
                 InputOutput::SafeReadString(date);
-                cout << "Requested Start Time (HH:MM): ";
-                InputOutput::SafeReadString(s);
-                cout << "Requested End Time (HH:MM): ";
-                InputOutput::SafeReadString(e);
+                
+                // Validate start time format
+                do
+                {
+                    cout << "Requested Start Time (HH:MM): ";
+                    InputOutput::SafeReadString(s);
+                    if (!DataValidator::IsValidTime(s))
+                    {
+                        cout << "Error: Invalid time format. Please use HH:MM format (e.g., 09:30, 14:00).\n";
+                    }
+                } while (!DataValidator::IsValidTime(s));
+                
+                // Validate end time format
+                do
+                {
+                    cout << "Requested End Time (HH:MM): ";
+                    InputOutput::SafeReadString(e);
+                    if (!DataValidator::IsValidTime(e))
+                    {
+                        cout << "Error: Invalid time format. Please use HH:MM format (e.g., 09:30, 14:00).\n";
+                    }
+                } while (!DataValidator::IsValidTime(e));
+                
+                // Validate start time < end time
+                if (!DataValidator::IsStartBeforeEnd(s, e))
+                {
+                    cout << "Error: Start time must be before end time.\n";
+                    continue; // Go back to menu
+                }
+                
                 RequestMakeupLab(lDetails, id, sec, date, s, e);
             }
             else
@@ -1314,10 +1439,34 @@ public:
                 InputOutput::SafeReadInt(leave);
                 if (!leave)
                 {
-                    cout << "Start: ";
-                    InputOutput::SafeReadString(s);
-                    cout << "End: ";
-                    InputOutput::SafeReadString(e);
+                    // Validate start time format
+                    do
+                    {
+                        cout << "Start (HH:MM): ";
+                        InputOutput::SafeReadString(s);
+                        if (!DataValidator::IsValidTime(s))
+                        {
+                            cout << "Error: Invalid time format. Please use HH:MM format (e.g., 09:30, 14:00).\n";
+                        }
+                    } while (!DataValidator::IsValidTime(s));
+                    
+                    // Validate end time format
+                    do
+                    {
+                        cout << "End (HH:MM): ";
+                        InputOutput::SafeReadString(e);
+                        if (!DataValidator::IsValidTime(e))
+                        {
+                            cout << "Error: Invalid time format. Please use HH:MM format (e.g., 09:30, 14:00).\n";
+                        }
+                    } while (!DataValidator::IsValidTime(e));
+                    
+                    // Validate start time < end time
+                    if (!DataValidator::IsStartBeforeEnd(s, e))
+                    {
+                        cout << "Error: Start time must be before end time.\n";
+                        continue; // Go back to menu
+                    }
                 }
                 FillTimeSheet(lDetails, logDetails, id, sec, d, s, e, leave);
             }
