@@ -7,214 +7,240 @@
 #include <string>
 #include <cctype>
 #include <algorithm>
+#include <sstream>
 
 using namespace std;
 
-// --- Constants ---
-const int STR_SIZE = 50;
-const int MAX_TAS = 5;
-const int MAX_SECTIONS = 5;
-
-// INPUT VALIDATION UTILITIES
-
-// TIME VALIDATION
-bool isValidTime(const char *t)
+// System Configuration
+class AppConfiguration
 {
-    if (strlen(t) != 5)
-        return false;
-    if (t[2] != ':')
-        return false;
-    if (!isdigit(t[0]) || !isdigit(t[1]) || !isdigit(t[3]) || !isdigit(t[4]))
-        return false;
+public:
+    static const int STR_SIZE = 50;
+};
 
-    int h = (t[0] - '0') * 10 + (t[1] - '0');
-    int m = (t[3] - '0') * 10 + (t[4] - '0');
+// Domain Classes for Constants
 
-    return (h >= 0 && h < 24 && m >= 0 && m < 60);
-}
-
-bool isStartBeforeEnd(const char *start, const char *end)
+class AssistantRules
 {
-    int h1, m1, h2, m2;
-    sscanf(start, "%d:%d", &h1, &m1);
-    sscanf(end, "%d:%d", &h2, &m2);
+public:
+    static const int MAX_TAS = 5;
+};
 
-    return (h1 * 60 + m1) < (h2 * 60 + m2);
-}
+// UTILITY CLASSES (Static Helpers)
 
-// NAME VALIDATION
-bool isValidName(const char *n)
+class InputOutput
 {
-    if (strlen(n) == 0)
-        return false;
-
-    for (int i = 0; n[i]; i++)
+public:
+    static void SafeReadInt(int &val)
     {
-        if (!isalpha(n[i]) && n[i] != '-' && n[i] != '_')
-            return false;
-    }
-    return true;
-}
-
-// COURSE CODE VALIDATION (e.g., CS101)
-bool isValidCourseCode(const char *c)
-{
-    int n = strlen(c);
-    if (n < 4 || n > 10)
-        return false;
-
-    int i = 0;
-
-    // Letters prefix
-    while (i < n && isalpha(c[i]))
-        i++;
-    if (i < 2)
-        return false; // at least 2 letters
-
-    // Numbers suffix
-    while (i < n && isdigit(c[i]))
-        i++;
-
-    return i == n;
-}
-
-// DATE VALIDATION (DD-MM or DD-MMM)
-bool isValidDate(const char *d)
-{
-    int len = strlen(d);
-
-    // Format DD-MM (numeric)
-    if (len == 5 && isdigit(d[0]) && isdigit(d[1]) && d[2] == '-' &&
-        isdigit(d[3]) && isdigit(d[4]))
-    {
-        return true;
-    }
-
-    // Format DD-MMM
-    if (len == 6 || len == 7)
-    {
-        if (!isdigit(d[0]) || !isdigit(d[1]) || d[2] != '-')
-            return false;
-
-        for (int i = 3; i < len; i++)
+        if (!(cin >> val))
         {
-            if (!isalpha(d[i]))
+            cin.clear();
+            cin.ignore(1000, '\n');
+            val = -1;
+        }
+    }
+
+    static void SafeReadString(string &val)
+    {
+        cin >> val;
+    }
+};
+
+class DataValidator
+{
+public:
+    static bool IsValidTime(const string &t)
+    {
+        if (t.length() != 5 || t[2] != ':')
+            return false;
+        if (!isdigit(t[0]) || !isdigit(t[1]) || !isdigit(t[3]) || !isdigit(t[4]))
+            return false;
+
+        try
+        {
+            int h = stoi(t.substr(0, 2));
+            int m = stoi(t.substr(3, 2));
+            return (h >= 0 && h < 24 && m >= 0 && m < 60);
+        }
+        catch (...)
+        {
+            return false;
+        }
+    }
+
+    static bool IsStartBeforeEnd(const string &start, const string &end)
+    {
+        int h1, m1, h2, m2;
+        sscanf(start.c_str(), "%d:%d", &h1, &m1);
+        sscanf(end.c_str(), "%d:%d", &h2, &m2);
+        return (h1 * 60 + m1) < (h2 * 60 + m2);
+    }
+
+    static bool IsValidName(const string &n)
+    {
+        if (n.empty())
+            return false;
+        for (char c : n)
+        {
+            if (!isalpha(c) && c != '-' && c != '_' && c != ' ')
                 return false;
         }
         return true;
     }
 
-    return false;
-}
+    static bool IsValidCourseCode(const string &c)
+    {
+        int n = c.length();
+        if (n < 4 || n > 10)
+            return false;
 
-// CORE CLASSES
+        int i = 0;
+        while (i < n && isalpha(c[i]))
+            i++;
+        if (i < 2)
+            return false;
 
-// Timing
-class Timing
+        while (i < n && isdigit(c[i]))
+            i++;
+        return i == n;
+    }
+
+    static bool IsValidDate(const string &d)
+    {
+        int len = d.length();
+        if (len < 5 || len > 7)
+            return false;
+
+        if (!isdigit(d[0]) || !isdigit(d[1]) || d[2] != '-')
+            return false;
+
+        for (int i = 3; i < len; i++)
+        {
+            if (!isalnum(d[i]))
+                return false;
+        }
+        return true;
+    }
+};
+
+// CORE DATA STRUCTURES
+
+class DateAndTime
 {
 public:
     char date[20];
     char startTime[10];
     char endTime[10];
 
-    Timing()
+    DateAndTime()
     {
         strcpy(date, "");
         strcpy(startTime, "");
         strcpy(endTime, "");
     }
 
-    void set(const char *d, const char *s, const char *e)
+    void Set(const string &d, const string &s, const string &e)
     {
-        strcpy(date, d);
-        strcpy(startTime, s);
-        strcpy(endTime, e);
+        strncpy(date, d.c_str(), sizeof(date) - 1);
+        date[sizeof(date) - 1] = '\0';
+        strncpy(startTime, s.c_str(), sizeof(startTime) - 1);
+        startTime[sizeof(startTime) - 1] = '\0';
+        strncpy(endTime, e.c_str(), sizeof(endTime) - 1);
+        endTime[sizeof(endTime) - 1] = '\0';
     }
 };
 
-// Room
-class Room
+class CampusBlock
+{
+public:
+    int buildingId;
+    char name[AppConfiguration::STR_SIZE];
+
+    CampusBlock() : buildingId(0) { strcpy(name, ""); }
+    CampusBlock(int id, const string &n) : buildingId(id)
+    {
+        strncpy(name, n.c_str(), sizeof(name) - 1);
+        name[sizeof(name) - 1] = '\0';
+    }
+};
+
+class LectureHall
 {
 public:
     int roomId;
     int roomNumber;
 
-    Room() : roomId(0), roomNumber(0) {}
-    Room(int id, int num) : roomId(id), roomNumber(num) {}
+    LectureHall() : roomId(0), roomNumber(0) {}
+    LectureHall(int id, int num) : roomId(id), roomNumber(num) {}
 };
 
-// Building
-class Building
+class ClassSection
 {
 public:
-    int buildingId;
-    char name[STR_SIZE];
+    static const int MAX_SECTIONS = 5;
 
-    Building() : buildingId(0) { strcpy(name, ""); }
-    Building(int id, const char *n) : buildingId(id) { strcpy(name, n); }
-};
-// SECTION & LAB
-class Section
-{
-public:
     char sectionName[10];
     int instructorId;
-    char instructorName[STR_SIZE];
+    char instructorName[AppConfiguration::STR_SIZE];
 
     int taCount;
-    int taIds[MAX_TAS];
-    char taNames[MAX_TAS][STR_SIZE];
+    int taIds[AssistantRules::MAX_TAS];
+    char taNames[AssistantRules::MAX_TAS][AppConfiguration::STR_SIZE];
 
     int buildingId;
     int roomId;
-    Timing scheduleTime;
 
-    Section() : instructorId(0), taCount(0), buildingId(0), roomId(0)
+    DateAndTime scheduleTime;
+
+    ClassSection() : instructorId(0), taCount(0), buildingId(0), roomId(0)
     {
         strcpy(sectionName, "");
         strcpy(instructorName, "");
     }
 
-    void setDetails(const char *name, int instId, const char *instName, int bId, int rId)
+    void SetDetails(const string &name, int instId, const string &instName, int bId, int rId)
     {
-        strcpy(sectionName, name);
+        strncpy(sectionName, name.c_str(), sizeof(sectionName) - 1);
+        sectionName[sizeof(sectionName) - 1] = '\0';
         instructorId = instId;
-        strcpy(instructorName, instName);
+        strncpy(instructorName, instName.c_str(), sizeof(instructorName) - 1);
+        instructorName[sizeof(instructorName) - 1] = '\0';
         buildingId = bId;
         roomId = rId;
     }
 
-    void addTA(int id, const char *name)
+    void AddTA(int id, const string &name)
     {
-        if (taCount < MAX_TAS)
+        if (taCount < AssistantRules::MAX_TAS)
         {
-            // Check for duplicate TA ID
             for (int i = 0; i < taCount; i++)
             {
                 if (taIds[i] == id)
                     return;
             }
             taIds[taCount] = id;
-            strcpy(taNames[taCount], name);
+            strncpy(taNames[taCount], name.c_str(), sizeof(taNames[taCount]) - 1);
+            taNames[taCount][sizeof(taNames[taCount]) - 1] = '\0';
             taCount++;
         }
     }
 };
 
-class Lab
+class CourseLaboratory
 {
 public:
     int labId;
-    char courseCode[STR_SIZE];
+    char courseCode[AppConfiguration::STR_SIZE];
 
     int sectionCount;
-    Section sections[MAX_SECTIONS];
+    ClassSection sections[ClassSection::MAX_SECTIONS];
 
-    Lab() : labId(0), sectionCount(0) { strcpy(courseCode, ""); }
+    CourseLaboratory() : labId(0), sectionCount(0) { strcpy(courseCode, ""); }
 
-    void addSection(Section s)
+    void AddSection(const ClassSection &s)
     {
-        if (sectionCount < MAX_SECTIONS)
+        if (sectionCount < ClassSection::MAX_SECTIONS)
         {
             sections[sectionCount] = s;
             sectionCount++;
@@ -225,11 +251,11 @@ public:
         }
     }
 
-    Section *findSection(const char *secName)
+    ClassSection *FindSection(const string &secName)
     {
         for (int i = 0; i < sectionCount; i++)
         {
-            if (strcmp(sections[i].sectionName, secName) == 0)
+            if (strcmp(sections[i].sectionName, secName.c_str()) == 0)
             {
                 return &sections[i];
             }
@@ -238,56 +264,57 @@ public:
     }
 };
 
-// TIMESHEET ENTRY
-class TimeSheetEntry
+class WorkLog
 {
 public:
     int labId;
     char sectionName[10];
-    Timing actualTiming;
+    DateAndTime actualTiming;
     bool isLeave;
 
-    TimeSheetEntry() : labId(0), isLeave(false) { strcpy(sectionName, ""); }
+    WorkLog() : labId(0), isLeave(false) { strcpy(sectionName, ""); }
 };
 
-// REPOSITORIES
-class ILabRepository
+// DETAILS INTERFACES (Formerly Repositories)
+
+class ILabDetails
 {
 public:
-    virtual void addLab(Lab l) = 0;
-    virtual void updateLab(Lab l) = 0;
-    virtual Lab *findLab(int id) = 0;
-    virtual vector<Lab> &getAllLabs() = 0;
-    virtual ~ILabRepository() {}
+    virtual void AddLab(const CourseLaboratory &l) = 0;
+    virtual void UpdateLab(const CourseLaboratory &l) = 0;
+    virtual CourseLaboratory *FindLab(int id) = 0;
+    virtual vector<CourseLaboratory> &GetAllLabs() = 0;
+    virtual ~ILabDetails() {}
 };
 
-class ITimeSheetRepository
+class IWorkLogDetails
 {
 public:
-    virtual void addEntry(TimeSheetEntry entry) = 0;
-    virtual vector<TimeSheetEntry> &getAllEntries() = 0;
-    virtual ~ITimeSheetRepository() {}
+    virtual void AddEntry(const WorkLog &entry) = 0;
+    virtual vector<WorkLog> &GetAllEntries() = 0;
+    virtual ~IWorkLogDetails() {}
 };
 
-class IVenueRepository
+class IVenueDetails
 {
 public:
-    virtual void addBuilding(Building b) = 0;
-    virtual void addRoom(Room r) = 0;
-    virtual Building *findBuilding(int id) = 0;
-    virtual Room *findRoom(int id) = 0;
-    virtual ~IVenueRepository() {}
+    virtual void AddBuilding(const CampusBlock &b) = 0;
+    virtual void AddRoom(const LectureHall &r) = 0;
+    virtual CampusBlock *FindBuilding(int id) = 0;
+    virtual LectureHall *FindRoom(int id) = 0;
+    virtual ~IVenueDetails() {}
 };
 
-// CONCRETE REPOSITORIES
-class LabRepository : public ILabRepository
+// CONCRETE DETAILS CLASSES
+
+class LabDetails : public ILabDetails
 {
-    vector<Lab> labs;
+    vector<CourseLaboratory> labs;
 
 public:
-    void addLab(Lab l) override { labs.push_back(l); }
+    void AddLab(const CourseLaboratory &l) override { labs.push_back(l); }
 
-    void updateLab(Lab l) override
+    void UpdateLab(const CourseLaboratory &l) override
     {
         for (auto &existing : labs)
         {
@@ -299,7 +326,7 @@ public:
         }
     }
 
-    Lab *findLab(int id) override
+    CourseLaboratory *FindLab(int id) override
     {
         for (auto &l : labs)
         {
@@ -309,28 +336,28 @@ public:
         return nullptr;
     }
 
-    vector<Lab> &getAllLabs() override { return labs; }
+    vector<CourseLaboratory> &GetAllLabs() override { return labs; }
 };
 
-class TimeSheetRepository : public ITimeSheetRepository
+class WorkLogDetails : public IWorkLogDetails
 {
-    vector<TimeSheetEntry> timesheets;
+    vector<WorkLog> logs;
 
 public:
-    void addEntry(TimeSheetEntry entry) override { timesheets.push_back(entry); }
-    vector<TimeSheetEntry> &getAllEntries() override { return timesheets; }
+    void AddEntry(const WorkLog &entry) override { logs.push_back(entry); }
+    vector<WorkLog> &GetAllEntries() override { return logs; }
 };
 
-class VenueRepository : public IVenueRepository
+class VenueDetails : public IVenueDetails
 {
-    vector<Building> buildings;
-    vector<Room> rooms;
+    vector<CampusBlock> buildings;
+    vector<LectureHall> rooms;
 
 public:
-    void addBuilding(Building b) override { buildings.push_back(b); }
-    void addRoom(Room r) override { rooms.push_back(r); }
+    void AddBuilding(const CampusBlock &b) override { buildings.push_back(b); }
+    void AddRoom(const LectureHall &r) override { rooms.push_back(r); }
 
-    Building *findBuilding(int id) override
+    CampusBlock *FindBuilding(int id) override
     {
         for (auto &b : buildings)
             if (b.buildingId == id)
@@ -338,7 +365,7 @@ public:
         return nullptr;
     }
 
-    Room *findRoom(int id) override
+    LectureHall *FindRoom(int id) override
     {
         for (auto &r : rooms)
             if (r.roomId == id)
@@ -346,54 +373,54 @@ public:
         return nullptr;
     }
 
-    void seedData()
+    void SeedData()
     {
         if (buildings.empty())
         {
-            buildings.push_back(Building(1, "Computer Science Block"));
-            buildings.push_back(Building(2, "Electrical Eng Block"));
+            buildings.push_back(CampusBlock(1, "Computer Science Block"));
+            buildings.push_back(CampusBlock(2, "Electrical Eng Block"));
         }
         if (rooms.empty())
         {
-            rooms.push_back(Room(101, 101));
-            rooms.push_back(Room(102, 102));
-            rooms.push_back(Room(201, 201));
+            rooms.push_back(LectureHall(101, 101));
+            rooms.push_back(LectureHall(102, 102));
+            rooms.push_back(LectureHall(201, 201));
         }
     }
 };
-// PERSON & ROLES
-class Person
+
+// =========================================================
+// ACTOR ROLES
+// =========================================================
+
+class UserRole
 {
 protected:
-    char name[STR_SIZE];
+    string roleName;
 
 public:
-    Person(const char *n) { strcpy(name, n); }
-    virtual ~Person() {}
+    UserRole(const string &n) : roleName(n) {}
+    virtual ~UserRole() {}
 };
 
-// HOD
-class HOD : public Person
+class Director : public UserRole
 {
 private:
-    float calculateHours(const char *start, const char *end)
+    float CalculateHours(const string &start, const string &end)
     {
         int h1, m1, h2, m2;
-        sscanf(start, "%d:%d", &h1, &m1);
-        sscanf(end, "%d:%d", &h2, &m2);
+        sscanf(start.c_str(), "%d:%d", &h1, &m1);
+        sscanf(end.c_str(), "%d:%d", &h2, &m2);
         int startMins = h1 * 60 + m1;
         int endMins = h2 * 60 + m2;
         return (float)(endMins - startMins) / 60.0f;
     }
 
-public:
-    HOD() : Person("Department Head") {}
-
-    void generateScheduleReport(ILabRepository *lRepo, IVenueRepository *vRepo)
+    void GenerateScheduleReport(ILabDetails *lDetails, IVenueDetails *vDetails)
     {
-        cout << "\n[HOD ACTION] Generating Weekly Schedule Report...\n";
+        cout << "\n[DIRECTOR ACTION] Generating Weekly Schedule Report...\n";
         cout << "--------------------------------------------------------------------------------\n";
-        vector<Lab> &labs = lRepo->getAllLabs();
+        vector<CourseLaboratory> &labs = lDetails->GetAllLabs();
         if (labs.empty())
         {
             cout << "No labs scheduled.\n";
@@ -404,16 +431,11 @@ public:
         {
             cout << "COURSE: " << l.courseCode << " (ID: " << l.labId << ")\n";
 
-            if (l.sectionCount == 0)
-            {
-                cout << "  No sections defined.\n";
-            }
-
             for (int i = 0; i < l.sectionCount; i++)
             {
-                Section &sec = l.sections[i];
-                Building *b = vRepo->findBuilding(sec.buildingId);
-                Room *r = vRepo->findRoom(sec.roomId);
+                ClassSection &sec = l.sections[i];
+                CampusBlock *b = vDetails->FindBuilding(sec.buildingId);
+                LectureHall *r = vDetails->FindRoom(sec.roomId);
 
                 cout << "  >> SECTION " << sec.sectionName << " | "
                      << sec.scheduleTime.date << " "
@@ -432,24 +454,24 @@ public:
                 }
                 cout << "\n\n";
             }
-            cout << "--------------------------------------------------------------------------------\n";
         }
+        cout << "--------------------------------------------------------------------------------\n";
     }
 
-    void generateWeeklyTimeSheetReport(ITimeSheetRepository *repo)
+    void GenerateWeeklyWorkLogReport(IWorkLogDetails *logDetails)
     {
-        cout << "\n[HOD REPORT] Weekly Filled Time Sheets\n";
+        cout << "\n[DIRECTOR REPORT] Weekly Filled Time Sheets\n";
         cout << "----------------------------------------------------------------------\n";
-        vector<TimeSheetEntry> &ts = repo->getAllEntries();
-        if (ts.empty())
+        vector<WorkLog> &logs = logDetails->GetAllEntries();
+        if (logs.empty())
         {
-            cout << "No timesheets filled.\n";
+            cout << "No work logs filled.\n";
             return;
         }
 
         cout << left << setw(8) << "Lab ID" << setw(10) << "Section"
              << setw(15) << "Date" << setw(15) << "Time" << setw(10) << "Status" << endl;
-        for (auto &t : ts)
+        for (auto &t : logs)
         {
             cout << left << setw(8) << t.labId
                  << setw(10) << t.sectionName
@@ -460,18 +482,18 @@ public:
         cout << "----------------------------------------------------------------------\n";
     }
 
-    void generateLabSemesterReport(ITimeSheetRepository *repo, int targetLabId)
+    void GenerateLabSemesterReport(IWorkLogDetails *logDetails, int targetLabId)
     {
-        cout << "\n[HOD REPORT] Semester Summary for Lab ID: " << targetLabId << "\n";
+        cout << "\n[DIRECTOR REPORT] Semester Summary for Lab ID: " << targetLabId << "\n";
         cout << "--------------------------------------------------\n";
-        vector<TimeSheetEntry> &ts = repo->getAllEntries();
+        vector<WorkLog> &logs = logDetails->GetAllEntries();
 
         float totalContactHours = 0;
         int totalLeaves = 0;
         int sessionsCount = 0;
         bool found = false;
 
-        for (auto &t : ts)
+        for (auto &t : logs)
         {
             if (t.labId == targetLabId)
             {
@@ -480,7 +502,7 @@ public:
                 if (t.isLeave)
                     totalLeaves++;
                 else
-                    totalContactHours += calculateHours(t.actualTiming.startTime, t.actualTiming.endTime);
+                    totalContactHours += CalculateHours(t.actualTiming.startTime, t.actualTiming.endTime);
             }
         }
 
@@ -497,198 +519,381 @@ public:
         }
         cout << "--------------------------------------------------\n";
     }
+
+public:
+    Director() : UserRole("Department Head") {}
+
+    void ShowMenu(ILabDetails *lDetails, IWorkLogDetails *logDetails, IVenueDetails *vDetails)
+    {
+        int choice;
+        while (true)
+        {
+            cout << "\n--- DIRECTOR DASHBOARD ---\n";
+            cout << "1. View Weekly Schedule (All Sections)\n";
+            cout << "2. Report: All Filled Time Sheets\n";
+            cout << "3. Report: Lab Semester Summary\n";
+            cout << "4. Logout\nSelect: ";
+            InputOutput::SafeReadInt(choice);
+            if (choice == -1)
+                continue;
+
+            switch (choice)
+            {
+            case 1:
+                GenerateScheduleReport(lDetails, vDetails);
+                break;
+            case 2:
+                GenerateWeeklyWorkLogReport(logDetails);
+                break;
+            case 3:
+            {
+                int id;
+                cout << "Enter Lab ID: ";
+                InputOutput::SafeReadInt(id);
+                if (id != -1)
+                    GenerateLabSemesterReport(logDetails, id);
+                break;
+            }
+            case 4:
+                return;
+            default:
+                cout << "Invalid choice.\n";
+            }
+        }
+    }
 };
 
-// Academic Officer
-class AcademicOfficer : public Person
+class Coordinator : public UserRole
 {
-public:
-    AcademicOfficer() : Person("Officer") {}
-
-    void scheduleSection(ILabRepository *repo, int id, const char *code,
-                         const char *secName,
-                         int instId, const char *instName,
+private:
+    void ScheduleSection(ILabDetails *lDetails, int id, const string &code,
+                         const string &secName,
+                         int instId, const string &instName,
                          int bId, int rId,
-                         const char *day, const char *start, const char *end,
+                         const string &day, const string &start, const string &end,
                          const vector<pair<int, string>> &tas)
     {
 
-        // Validation: Course Code
-        if (!isValidCourseCode(code))
+        if (!DataValidator::IsValidCourseCode(code))
         {
             cout << "Invalid Course Code. Must be letters+digits (e.g., CS101).\n";
             return;
         }
-
-        // Validation: Section Name
-        if (!isValidName(secName))
+        if (!DataValidator::IsValidName(secName))
         {
             cout << "Invalid Section Name. Only letters allowed.\n";
             return;
         }
-
-        // Validation: Instructor Name
-        if (!isValidName(instName))
+        if (!DataValidator::IsValidName(instName))
         {
             cout << "Invalid Instructor Name.\n";
             return;
         }
-
-        // Validation: Times
-        if (!isValidTime(start) || !isValidTime(end) || !isStartBeforeEnd(start, end))
+        if (!DataValidator::IsValidTime(start) || !DataValidator::IsValidTime(end) || !DataValidator::IsStartBeforeEnd(start, end))
         {
             cout << "Invalid timing. Ensure HH:MM format and Start < End.\n";
             return;
         }
 
-        Lab *existingLab = repo->findLab(id);
-        Lab workLab;
+        CourseLaboratory *existingLab = lDetails->FindLab(id);
+        CourseLaboratory workLab;
 
         if (existingLab != nullptr)
             workLab = *existingLab;
         else
         {
             workLab.labId = id;
-            strcpy(workLab.courseCode, code);
+            strncpy(workLab.courseCode, code.c_str(), sizeof(workLab.courseCode) - 1);
+            workLab.courseCode[sizeof(workLab.courseCode) - 1] = '\0';
         }
 
-        if (workLab.findSection(secName) != nullptr)
+        if (workLab.FindSection(secName) != nullptr)
         {
             cout << ">> Error: Section " << secName << " already exists for Lab " << id << ".\n";
             return;
         }
 
-        Section newSec;
-        newSec.setDetails(secName, instId, instName, bId, rId);
-        newSec.scheduleTime.set(day, start, end);
+        ClassSection newSec;
+        newSec.SetDetails(secName, instId, instName, bId, rId);
+        newSec.scheduleTime.Set(day, start, end);
 
-        // Add TAs with name validation & uniqueness
-        for (auto &ta : tas)
+        for (const auto &ta : tas)
         {
-            if (!isValidName(ta.second.c_str()))
+            if (!DataValidator::IsValidName(ta.second))
             {
                 cout << "Invalid TA Name: " << ta.second << ". Skipping.\n";
                 continue;
             }
-            newSec.addTA(ta.first, ta.second.c_str());
+            newSec.AddTA(ta.first, ta.second);
         }
 
-        workLab.addSection(newSec);
+        workLab.AddSection(newSec);
 
         if (existingLab != nullptr)
-            repo->updateLab(workLab);
+            lDetails->UpdateLab(workLab);
         else
-            repo->addLab(workLab);
+            lDetails->AddLab(workLab);
 
         cout << ">> Success: Section " << secName << " added to Lab " << id << " (" << code << ").\n";
     }
+
+public:
+    Coordinator() : UserRole("Coordinator") {}
+
+    void ShowMenu(ILabDetails *lDetails)
+    {
+        int choice;
+        while (true)
+        {
+            cout << "\n--- COORDINATOR DASHBOARD ---\n";
+            cout << "1. Schedule New Section for Lab\n";
+            cout << "2. Logout\nSelect: ";
+            InputOutput::SafeReadInt(choice);
+            if (choice == -1)
+                continue;
+
+            if (choice == 1)
+            {
+                int id, instId, bId, rId, taCount;
+                string code, secName, instName, day, s, e;
+                vector<pair<int, string>> tas;
+
+                cout << "Enter Lab ID: ";
+                InputOutput::SafeReadInt(id);
+                cout << "Enter Course Code (e.g., CS101): ";
+                InputOutput::SafeReadString(code);
+                cout << "Enter Section Name (e.g., A): ";
+                InputOutput::SafeReadString(secName);
+
+                cout << "Enter Instructor ID: ";
+                InputOutput::SafeReadInt(instId);
+                cout << "Enter Instructor Name: ";
+                InputOutput::SafeReadString(instName);
+
+                cout << "Enter Building ID (1=CS, 2=EE): ";
+                InputOutput::SafeReadInt(bId);
+                cout << "Enter Room ID (e.g., 101): ";
+                InputOutput::SafeReadInt(rId);
+
+                cout << "How many TAs? ";
+                InputOutput::SafeReadInt(taCount);
+                if (taCount > AssistantRules::MAX_TAS)
+                    taCount = AssistantRules::MAX_TAS;
+                for (int i = 0; i < taCount; i++)
+                {
+                    int tId;
+                    string tName;
+                    cout << "  TA " << i + 1 << " ID: ";
+                    InputOutput::SafeReadInt(tId);
+                    cout << "  TA " << i + 1 << " Name: ";
+                    InputOutput::SafeReadString(tName);
+                    tas.push_back({tId, tName});
+                }
+
+                cout << "Enter Day (e.g., Monday): ";
+                InputOutput::SafeReadString(day);
+                cout << "Enter Start Time (HH:MM): ";
+                InputOutput::SafeReadString(s);
+                cout << "Enter End Time (HH:MM): ";
+                InputOutput::SafeReadString(e);
+
+                ScheduleSection(lDetails, id, code, secName, instId, instName, bId, rId, day, s, e, tas);
+            }
+            else if (choice == 2)
+                return;
+            else
+                cout << "Invalid choice.\n";
+        }
+    }
 };
 
-// Instructor
-class Instructor : public Person
+class Lecturer : public UserRole
 {
-public:
-    Instructor() : Person("Instructor") {}
-
-    void requestMakeupLab(ILabRepository *repo, int labId, const char *secName, const char *newStart, const char *newEnd)
+private:
+    void RequestMakeupLab(ILabDetails *lDetails, int labId, const string &secName, const string &newStart, const string &newEnd)
     {
-        if (!isValidTime(newStart) || !isValidTime(newEnd) || !isStartBeforeEnd(newStart, newEnd))
+        if (!DataValidator::IsValidTime(newStart) || !DataValidator::IsValidTime(newEnd) || !DataValidator::IsStartBeforeEnd(newStart, newEnd))
         {
             cout << "Invalid new timings. Ensure HH:MM format and Start < End.\n";
             return;
         }
 
-        Lab *l = repo->findLab(labId);
+        CourseLaboratory *l = lDetails->FindLab(labId);
         if (!l)
         {
             cout << ">> Error: Lab ID " << labId << " not found.\n";
             return;
         }
 
-        Section *s = l->findSection(secName);
+        ClassSection *s = l->FindSection(secName);
         if (!s)
         {
             cout << ">> Error: Section " << secName << " not found.\n";
             return;
         }
 
-        s->scheduleTime.set("Makeup", newStart, newEnd);
+        s->scheduleTime.Set("Makeup", newStart, newEnd);
         cout << ">> Success: Makeup requested/approved for Lab " << labId << " Section " << secName << ".\n";
+    }
+
+public:
+    Lecturer() : UserRole("Lecturer") {}
+
+    void ShowMenu(ILabDetails *lDetails)
+    {
+        int choice;
+        while (true)
+        {
+            cout << "\n--- LECTURER DASHBOARD ---\n";
+            cout << "1. Request Makeup Class\n";
+            cout << "2. Logout\nSelect: ";
+            InputOutput::SafeReadInt(choice);
+            if (choice == -1)
+                continue;
+
+            if (choice == 1)
+            {
+                int id;
+                string sec, s, e;
+                cout << "Enter Lab ID: ";
+                InputOutput::SafeReadInt(id);
+                cout << "Enter Section Name: ";
+                InputOutput::SafeReadString(sec);
+                cout << "Enter New Start Time (HH:MM): ";
+                InputOutput::SafeReadString(s);
+                cout << "Enter New End Time (HH:MM): ";
+                InputOutput::SafeReadString(e);
+                RequestMakeupLab(lDetails, id, sec, s, e);
+            }
+            else if (choice == 2)
+                return;
+            else
+                cout << "Invalid choice.\n";
+        }
     }
 };
 
-// ATTENDANT
-class Attendant : public Person
+class LabStaff : public UserRole
 {
-public:
-    Attendant() : Person("Lab Attendant") {}
-
-    void fillTimeSheet(ITimeSheetRepository *repo, int labId, const char *secName,
-                       const char *date, const char *start, const char *end, bool isLeave)
+private:
+    void FillTimeSheet(IWorkLogDetails *logDetails, int labId, const string &secName,
+                       const string &date, const string &start, const string &end, bool isLeave)
     {
-        // Validate times if not on leave
         if (!isLeave)
         {
-            if (!isValidTime(start) || !isValidTime(end) || !isStartBeforeEnd(start, end))
+            if (!DataValidator::IsValidTime(start) || !DataValidator::IsValidTime(end) || !DataValidator::IsStartBeforeEnd(start, end))
             {
                 cout << "Invalid timing. Cannot log time sheet entry.\n";
                 return;
             }
         }
+        if (!DataValidator::IsValidDate(date))
+        {
+            cout << "Invalid date format (e.g., 12-Nov).\n";
+            return;
+        }
 
-        TimeSheetEntry entry;
+        WorkLog entry;
         entry.labId = labId;
-        strcpy(entry.sectionName, secName);
-        entry.actualTiming.set(date, start, end);
+        strncpy(entry.sectionName, secName.c_str(), sizeof(entry.sectionName) - 1);
+        entry.sectionName[sizeof(entry.sectionName) - 1] = '\0';
+        entry.actualTiming.Set(date, start, end);
         entry.isLeave = isLeave;
-        repo->addEntry(entry);
+        logDetails->AddEntry(entry);
 
-        cout << ">> Success: Time sheet entry logged for Section " << secName << ".\n";
+        cout << ">> Success: Work log entry logged for Section " << secName << ".\n";
+    }
+
+public:
+    LabStaff() : UserRole("Lab Staff") {}
+
+    void ShowMenu(IWorkLogDetails *logDetails)
+    {
+        int choice;
+        while (true)
+        {
+            cout << "\n--- STAFF DASHBOARD ---\n";
+            cout << "1. Fill Work Log\n";
+            cout << "2. Logout\nSelect: ";
+            InputOutput::SafeReadInt(choice);
+            if (choice == -1)
+                continue;
+
+            if (choice == 1)
+            {
+                int id, isLeave;
+                string sec, s, e, d;
+                cout << "Enter Lab ID: ";
+                InputOutput::SafeReadInt(id);
+                cout << "Enter Section Name: ";
+                InputOutput::SafeReadString(sec);
+                cout << "Enter Date (DD-MMM or DD-MM): ";
+                InputOutput::SafeReadString(d);
+                cout << "Is Instructor on Leave? (1=Yes, 0=No): ";
+                InputOutput::SafeReadInt(isLeave);
+
+                if (isLeave == 1)
+                {
+                    FillTimeSheet(logDetails, id, sec, d, "00:00", "00:00", true);
+                }
+                else
+                {
+                    cout << "Enter Actual Start (HH:MM): ";
+                    InputOutput::SafeReadString(s);
+                    cout << "Enter Actual End (HH:MM): ";
+                    InputOutput::SafeReadString(e);
+                    FillTimeSheet(logDetails, id, sec, d, s, e, false);
+                }
+            }
+            else if (choice == 2)
+                return;
+            else
+                cout << "Invalid choice.\n";
+        }
     }
 };
 
-// PERSISTENCE SERVICE
-class PersistenceService
+class StorageManager
 {
-    ILabRepository *labRepo;
-    ITimeSheetRepository *tsRepo;
+    ILabDetails *labDetails;
+    IWorkLogDetails *logDetails;
 
 public:
-    PersistenceService(ILabRepository *l, ITimeSheetRepository *t) : labRepo(l), tsRepo(t) {}
+    StorageManager(ILabDetails *l, IWorkLogDetails *t) : labDetails(l), logDetails(t) {}
 
-    void save()
+    void Save()
     {
         ofstream lOut("labs_v2.dat", ios::binary);
-        vector<Lab> &labs = labRepo->getAllLabs();
+        vector<CourseLaboratory> &labs = labDetails->GetAllLabs();
         int lSize = labs.size();
-        lOut.write((char *)&lSize, sizeof(int));
-        for (auto &l : labs)
-            lOut.write((char *)&l, sizeof(Lab));
+        lOut.write(reinterpret_cast<char *>(&lSize), sizeof(int));
+        for (const auto &l : labs)
+            lOut.write(reinterpret_cast<const char *>(&l), sizeof(CourseLaboratory));
         lOut.close();
 
         ofstream tOut("ts_v2.dat", ios::binary);
-        vector<TimeSheetEntry> &ts = tsRepo->getAllEntries();
-        int tSize = ts.size();
-        tOut.write((char *)&tSize, sizeof(int));
-        for (auto &t : ts)
-            tOut.write((char *)&t, sizeof(TimeSheetEntry));
+        vector<WorkLog> &logs = logDetails->GetAllEntries();
+        int tSize = logs.size();
+        tOut.write(reinterpret_cast<char *>(&tSize), sizeof(int));
+        for (const auto &t : logs)
+            tOut.write(reinterpret_cast<const char *>(&t), sizeof(WorkLog));
         tOut.close();
 
         cout << "[System] Data saved.\n";
     }
 
-    void load()
+    void Load()
     {
         ifstream lIn("labs_v2.dat", ios::binary);
         if (lIn)
         {
             int lSize = 0;
-            lIn.read((char *)&lSize, sizeof(int));
+            lIn.read(reinterpret_cast<char *>(&lSize), sizeof(int));
             for (int i = 0; i < lSize; i++)
             {
-                Lab l;
-                lIn.read((char *)&l, sizeof(Lab));
-                labRepo->addLab(l);
+                CourseLaboratory l;
+                lIn.read(reinterpret_cast<char *>(&l), sizeof(CourseLaboratory));
+                labDetails->AddLab(l);
             }
             lIn.close();
         }
@@ -697,235 +902,34 @@ public:
         if (tIn)
         {
             int tSize = 0;
-            tIn.read((char *)&tSize, sizeof(int));
+            tIn.read(reinterpret_cast<char *>(&tSize), sizeof(int));
             for (int i = 0; i < tSize; i++)
             {
-                TimeSheetEntry t;
-                tIn.read((char *)&t, sizeof(TimeSheetEntry));
-                tsRepo->addEntry(t);
+                WorkLog t;
+                tIn.read(reinterpret_cast<char *>(&t), sizeof(WorkLog));
+                logDetails->AddEntry(t);
             }
             tIn.close();
         }
     }
 };
-// ROLE-SPECIFIC MENUS
-void hodMenu(HOD &hod, ILabRepository *lRepo, ITimeSheetRepository *tRepo, IVenueRepository *vRepo)
-{
-    while (true)
-    {
-        cout << "\n--- HOD DASHBOARD ---\n";
-        cout << "1. View Weekly Schedule (All Sections)\n";
-        cout << "2. Report: All Filled Time Sheets\n";
-        cout << "3. Report: Lab Semester Summary\n";
-        cout << "4. Logout\nSelect: ";
-        int choice;
-        if (!(cin >> choice))
-        {
-            cin.clear();
-            cin.ignore(1000, '\n');
-            continue;
-        }
-
-        switch (choice)
-        {
-        case 1:
-            hod.generateScheduleReport(lRepo, vRepo);
-            break;
-        case 2:
-            hod.generateWeeklyTimeSheetReport(tRepo);
-            break;
-        case 3:
-        {
-            int id;
-            cout << "Enter Lab ID: ";
-            if (!(cin >> id))
-            {
-                cin.clear();
-                cin.ignore(1000, '\n');
-                break;
-            }
-            hod.generateLabSemesterReport(tRepo, id);
-            break;
-        }
-        case 4:
-            return;
-        default:
-            cout << "Invalid choice.\n";
-        }
-    }
-}
-
-// Academic Officer Menu
-void officerMenu(AcademicOfficer &ao, ILabRepository *lRepo)
-{
-    while (true)
-    {
-        cout << "\n--- ACADEMIC OFFICER DASHBOARD ---\n";
-        cout << "1. Schedule New Section for Lab\n";
-        cout << "2. Logout\nSelect: ";
-        int choice;
-        if (!(cin >> choice))
-        {
-            cin.clear();
-            cin.ignore(1000, '\n');
-            continue;
-        }
-
-        if (choice == 1)
-        {
-            int id, instId, bId, rId, taCount;
-            char code[20], secName[10], instName[50], day[15], s[10], e[10];
-            vector<pair<int, string>> tas;
-
-            cout << "Enter Lab ID: ";
-            cin >> id;
-            cout << "Enter Course Code (e.g., CS101): ";
-            cin >> code;
-            cout << "Enter Section Name (e.g., A): ";
-            cin >> secName;
-
-            cout << "Enter Instructor ID: ";
-            cin >> instId;
-            cout << "Enter Instructor Name: ";
-            cin >> instName;
-
-            cout << "Enter Building ID (1=CS, 2=EE): ";
-            cin >> bId;
-            cout << "Enter Room ID (e.g., 101): ";
-            cin >> rId;
-
-            cout << "How many TAs? ";
-            cin >> taCount;
-            for (int i = 0; i < taCount; i++)
-            {
-                int tId;
-                char tName[50];
-                cout << "  TA " << i + 1 << " ID: ";
-                cin >> tId;
-                cout << "  TA " << i + 1 << " Name: ";
-                cin >> tName;
-                tas.push_back({tId, string(tName)});
-            }
-
-            cout << "Enter Day (e.g., Monday): ";
-            cin >> day;
-            cout << "Enter Start Time (HH:MM): ";
-            cin >> s;
-            cout << "Enter End Time (HH:MM): ";
-            cin >> e;
-
-            ao.scheduleSection(lRepo, id, code, secName, instId, instName, bId, rId, day, s, e, tas);
-        }
-        else if (choice == 2)
-            return;
-        else
-            cout << "Invalid choice.\n";
-    }
-}
-
-// Instructor Menu
-void instructorMenu(Instructor &inst, ILabRepository *lRepo)
-{
-    while (true)
-    {
-        cout << "\n--- INSTRUCTOR DASHBOARD ---\n";
-        cout << "1. Request Makeup Class\n";
-        cout << "2. Logout\nSelect: ";
-        int choice;
-        if (!(cin >> choice))
-        {
-            cin.clear();
-            cin.ignore(1000, '\n');
-            continue;
-        }
-
-        if (choice == 1)
-        {
-            int id;
-            char sec[10], s[10], e[10];
-            cout << "Enter Lab ID: ";
-            cin >> id;
-            cout << "Enter Section Name: ";
-            cin >> sec;
-            cout << "Enter New Start Time: ";
-            cin >> s;
-            cout << "Enter New End Time: ";
-            cin >> e;
-            inst.requestMakeupLab(lRepo, id, sec, s, e);
-        }
-        else if (choice == 2)
-            return;
-        else
-            cout << "Invalid choice.\n";
-    }
-}
-
-// Attendant Menu
-void attendantMenu(Attendant &att, ITimeSheetRepository *tRepo)
-{
-    while (true)
-    {
-        cout << "\n--- ATTENDANT DASHBOARD ---\n";
-        cout << "1. Fill Time Sheet\n";
-        cout << "2. Logout\nSelect: ";
-        int choice;
-        if (!(cin >> choice))
-        {
-            cin.clear();
-            cin.ignore(1000, '\n');
-            continue;
-        }
-
-        if (choice == 1)
-        {
-            int id, isLeave;
-            char sec[10], s[10], e[10], d[20];
-            cout << "Enter Lab ID: ";
-            cin >> id;
-            cout << "Enter Section Name: ";
-            cin >> sec;
-            cout << "Enter Date (e.g., 12-Nov): ";
-            cin >> d;
-            cout << "Is Instructor on Leave? (1=Yes, 0=No): ";
-            cin >> isLeave;
-
-            if (isLeave)
-            {
-                att.fillTimeSheet(tRepo, id, sec, d, "00:00", "00:00", true);
-            }
-            else
-            {
-                cout << "Enter Actual Start (HH:MM): ";
-                cin >> s;
-                cout << "Enter Actual End (HH:MM): ";
-                cin >> e;
-                att.fillTimeSheet(tRepo, id, sec, d, s, e, false);
-            }
-        }
-        else if (choice == 2)
-            return;
-        else
-            cout << "Invalid choice.\n";
-    }
-}
-// MAIN FUNCTION
 int main()
 {
-    // Repositories
-    LabRepository labRepo;
-    TimeSheetRepository tsRepo;
-    VenueRepository venueRepo;
-    venueRepo.seedData();
+    // Details (formerly Repositories)
+    LabDetails labDetails;
+    WorkLogDetails logDetails;
+    VenueDetails venueDetails;
+    venueDetails.SeedData();
 
-    // Persistence Service
-    PersistenceService persistence(&labRepo, &tsRepo);
-    persistence.load(); // Load previously saved data if any
+    // Storage Manager
+    StorageManager storage(&labDetails, &logDetails);
+    storage.Load();
 
     // Role Instances
-    HOD hodUser;
-    AcademicOfficer aoUser;
-    Instructor instUser;
-    Attendant attUser;
+    Director director;
+    Coordinator coordinator;
+    Lecturer lecturer;
+    LabStaff staff;
 
     while (true)
     {
@@ -933,10 +937,10 @@ int main()
         cout << "   UNIVERSITY LAB MANAGEMENT SYSTEM      \n";
         cout << "=========================================\n";
         cout << "Who are you?\n";
-        cout << "1. HOD\n";
-        cout << "2. Academic Officer\n";
-        cout << "3. Instructor\n";
-        cout << "4. Lab Attendant\n";
+        cout << "1. Director (HOD)\n";
+        cout << "2. Coordinator (Academic Officer)\n";
+        cout << "3. Lecturer (Instructor)\n";
+        cout << "4. Lab Staff (Attendant)\n";
         cout << "5. Save & Exit System\n";
         cout << "Select your Role: ";
 
@@ -951,25 +955,24 @@ int main()
         switch (role)
         {
         case 1:
-            hodMenu(hodUser, &labRepo, &tsRepo, &venueRepo);
+            director.ShowMenu(&labDetails, &logDetails, &venueDetails);
             break;
         case 2:
-            officerMenu(aoUser, &labRepo);
+            coordinator.ShowMenu(&labDetails);
             break;
         case 3:
-            instructorMenu(instUser, &labRepo);
+            lecturer.ShowMenu(&labDetails);
             break;
         case 4:
-            attendantMenu(attUser, &tsRepo);
+            staff.ShowMenu(&logDetails);
             break;
         case 5:
-            persistence.save();
+            storage.Save();
             cout << "Exiting system. Goodbye!\n";
             return 0;
         default:
             cout << "Invalid role selected.\n";
         }
     }
-
     return 0;
 }
