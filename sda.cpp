@@ -113,14 +113,15 @@ public:
     LectureHall(int id, int num) : roomId(id), roomNumber(num) {}
 };
 
-class Instructor
+// Renamed to UniversityTeacher to avoid collision with the 'Instructor' Person class
+class UniversityTeacher
 {
 public:
-    int instructorId;
+    int teacherId;
     string name;
 
-    Instructor() : instructorId(0) {}
-    Instructor(int id, string n) : instructorId(id), name(n) {}
+    UniversityTeacher() : teacherId(0) {}
+    UniversityTeacher(int id, string n) : teacherId(id), name(n) {}
 };
 
 class TeachingAssistant
@@ -137,18 +138,21 @@ class ClassSection
 {
 public:
     string sectionName;
-    Instructor *instructor;
+
+    // Using Pointers to domain objects
+    UniversityTeacher *teacher;
     vector<TeachingAssistant *> assistants;
+
     CampusBlock *building;
     LectureHall *room;
     DateAndTime scheduleTime;
 
-    ClassSection() : instructor(nullptr), building(nullptr), room(nullptr) {}
+    ClassSection() : teacher(nullptr), building(nullptr), room(nullptr) {}
 
-    void SetDetails(string name, Instructor *inst, CampusBlock *b, LectureHall *r)
+    void SetDetails(string name, UniversityTeacher *t, CampusBlock *b, LectureHall *r)
     {
         sectionName = name;
-        instructor = inst;
+        teacher = t;
         building = b;
         room = r;
     }
@@ -195,7 +199,7 @@ public:
     WorkLog() : labId(0), isLeave(false) {}
 };
 
-// DETAILS INTERFACES (Renamed from I...)
+// DETAILS INTERFACES
 
 class LabDetails
 {
@@ -224,14 +228,14 @@ public:
 class FacultyDetails
 {
 public:
-    virtual void AddInstructor(const Instructor &i) = 0;
+    virtual void AddTeacher(const UniversityTeacher &t) = 0;
     virtual void AddTA(const TeachingAssistant &t) = 0;
-    virtual Instructor *FindInstructor(int id) = 0;
+    virtual UniversityTeacher *FindTeacher(int id) = 0;
     virtual TeachingAssistant *FindTA(int id) = 0;
     virtual void SeedData() = 0;
 };
 
-// CONCRETE IMPLEMENTATIONS (Renamed to InMemory...)
+// CONCRETE IMPLEMENTATIONS
 
 class InMemoryLabDetails : public LabDetails
 {
@@ -306,18 +310,18 @@ public:
 
 class InMemoryFacultyDetails : public FacultyDetails
 {
-    vector<Instructor> instructors;
+    vector<UniversityTeacher> teachers;
     vector<TeachingAssistant> tas;
 
 public:
-    void AddInstructor(const Instructor &i) override { instructors.push_back(i); }
+    void AddTeacher(const UniversityTeacher &t) override { teachers.push_back(t); }
     void AddTA(const TeachingAssistant &t) override { tas.push_back(t); }
 
-    Instructor *FindInstructor(int id) override
+    UniversityTeacher *FindTeacher(int id) override
     {
-        for (auto &i : instructors)
-            if (i.instructorId == id)
-                return &i;
+        for (auto &t : teachers)
+            if (t.teacherId == id)
+                return &t;
         return nullptr;
     }
     TeachingAssistant *FindTA(int id) override
@@ -329,10 +333,10 @@ public:
     }
     void SeedData() override
     {
-        if (instructors.empty())
+        if (teachers.empty())
         {
-            instructors.push_back(Instructor(1, "Dr. Smith"));
-            instructors.push_back(Instructor(2, "Dr. Jones"));
+            teachers.push_back(UniversityTeacher(1, "Dr. Smith"));
+            teachers.push_back(UniversityTeacher(2, "Dr. Jones"));
         }
         if (tas.empty())
         {
@@ -343,9 +347,19 @@ public:
     }
 };
 
-// ACTOR ROLES
+// ACTOR ROLES (Restored to original names)
 
-class Director
+class Person
+{
+protected:
+    string roleName;
+
+public:
+    Person(const string &n) : roleName(n) {}
+    virtual ~Person() {}
+};
+
+class HOD : public Person
 {
 private:
     float CalculateHours(const string &start, const string &end)
@@ -359,7 +373,7 @@ private:
 
     void GenerateScheduleReport(LabDetails *lDetails)
     {
-        cout << "\n[DIRECTOR ACTION] Generating Weekly Schedule Report...\n";
+        cout << "\n[HOD ACTION] Generating Weekly Schedule Report...\n";
         vector<CourseLaboratory> &labs = lDetails->GetAllLabs();
         for (auto &l : labs)
         {
@@ -371,7 +385,7 @@ private:
 
                 cout << "     Venue: " << (sec.building ? sec.building->name : "N/A")
                      << " - Room " << (sec.room ? to_string(sec.room->roomNumber) : "N/A") << "\n";
-                cout << "     Instructor: " << (sec.instructor ? sec.instructor->name : "Unassigned") << "\n";
+                cout << "     Instructor: " << (sec.teacher ? sec.teacher->name : "Unassigned") << "\n";
                 cout << "     TAs: ";
                 for (auto ta : sec.assistants)
                     cout << (ta ? ta->name : "Unknown") << ", ";
@@ -380,28 +394,44 @@ private:
         }
     }
 
+    void GenerateWeeklyWorkLogReport(WorkLogDetails *logDetails)
+    {
+        cout << "\n[HOD REPORT] Weekly Filled Time Sheets\n";
+        vector<WorkLog> &logs = logDetails->GetAllEntries();
+        cout << left << setw(8) << "Lab ID" << setw(10) << "Section" << setw(15) << "Date" << setw(10) << "Status" << endl;
+        for (auto &t : logs)
+        {
+            cout << left << setw(8) << t.labId << setw(10) << t.sectionName << setw(15) << t.actualTiming.date
+                 << setw(10) << (t.isLeave ? "LEAVE" : "PRESENT") << endl;
+        }
+    }
+
 public:
-    void ShowMenu(LabDetails *lDetails)
+    HOD() : Person("Head of Department") {}
+
+    void ShowMenu(LabDetails *lDetails, WorkLogDetails *wDetails)
     {
         int choice;
         while (true)
         {
-            cout << "\n--- DIRECTOR DASHBOARD ---\n1. View Schedule\n2. Logout\nSelect: ";
+            cout << "\n--- HOD DASHBOARD ---\n1. View Schedule\n2. View Time Sheets\n3. Logout\nSelect: ";
             InputOutput::SafeReadInt(choice);
             if (choice == 1)
                 GenerateScheduleReport(lDetails);
+            else if (choice == 2)
+                GenerateWeeklyWorkLogReport(wDetails);
             else
                 return;
         }
     }
 };
 
-class Coordinator
+class AcademicOfficer : public Person
 {
 private:
     void ScheduleSection(LabDetails *lDetails, VenueDetails *vDetails, FacultyDetails *fDetails)
     {
-        int labId, instId, bId, rId, taCount;
+        int labId, teacherId, bId, rId, taCount;
         string code, secName, day, s, e;
 
         cout << "Lab ID: ";
@@ -410,8 +440,8 @@ private:
         InputOutput::SafeReadString(code);
         cout << "Section Name: ";
         InputOutput::SafeReadString(secName);
-        cout << "Instructor ID (1 or 2): ";
-        InputOutput::SafeReadInt(instId);
+        cout << "Instructor/Teacher ID (1 or 2): ";
+        InputOutput::SafeReadInt(teacherId);
         cout << "Building ID (1 or 2): ";
         InputOutput::SafeReadInt(bId);
         cout << "Room ID (101 or 102): ";
@@ -423,18 +453,18 @@ private:
         cout << "End (HH:MM): ";
         InputOutput::SafeReadString(e);
 
-        Instructor *inst = fDetails->FindInstructor(instId);
+        UniversityTeacher *teach = fDetails->FindTeacher(teacherId);
         CampusBlock *build = vDetails->FindBuilding(bId);
         LectureHall *room = vDetails->FindRoom(rId);
 
-        if (!inst || !build || !room)
+        if (!teach || !build || !room)
         {
-            cout << "Error: Invalid Instructor, Building, or Room ID.\n";
+            cout << "Error: Invalid Teacher, Building, or Room ID.\n";
             return;
         }
 
         ClassSection newSec;
-        newSec.SetDetails(secName, inst, build, room);
+        newSec.SetDetails(secName, teach, build, room);
         newSec.scheduleTime.Set(day, s, e);
 
         cout << "How many TAs? ";
@@ -467,15 +497,116 @@ private:
     }
 
 public:
+    AcademicOfficer() : Person("Academic Officer") {}
+
     void ShowMenu(LabDetails *lDetails, VenueDetails *vDetails, FacultyDetails *fDetails)
     {
         int choice;
         while (true)
         {
-            cout << "\n--- COORDINATOR ---\n1. Schedule Section\n2. Logout\nSelect: ";
+            cout << "\n--- ACADEMIC OFFICER ---\n1. Schedule Section\n2. Logout\nSelect: ";
             InputOutput::SafeReadInt(choice);
             if (choice == 1)
                 ScheduleSection(lDetails, vDetails, fDetails);
+            else
+                return;
+        }
+    }
+};
+
+class Instructor : public Person
+{
+private:
+    void RequestMakeupLab(LabDetails *lDetails, int labId, const string &secName, const string &s, const string &e)
+    {
+        CourseLaboratory *l = lDetails->FindLab(labId);
+        if (l)
+        {
+            ClassSection *sec = l->FindSection(secName);
+            if (sec)
+            {
+                sec->scheduleTime.startTime = s;
+                sec->scheduleTime.endTime = e;
+                cout << "Makeup Requested/Updated.\n";
+            }
+        }
+    }
+
+public:
+    Instructor() : Person("Instructor") {}
+
+    void ShowMenu(LabDetails *lDetails)
+    {
+        int choice;
+        while (true)
+        {
+            cout << "\n--- INSTRUCTOR DASHBOARD ---\n1. Request Makeup\n2. Logout\nSelect: ";
+            InputOutput::SafeReadInt(choice);
+            if (choice == 1)
+            {
+                int id;
+                string sec, s, e;
+                cout << "Lab ID: ";
+                InputOutput::SafeReadInt(id);
+                cout << "Section: ";
+                InputOutput::SafeReadString(sec);
+                cout << "Start: ";
+                InputOutput::SafeReadString(s);
+                cout << "End: ";
+                InputOutput::SafeReadString(e);
+                RequestMakeupLab(lDetails, id, sec, s, e);
+            }
+            else
+                return;
+        }
+    }
+};
+
+class Attendant : public Person
+{
+private:
+    void FillTimeSheet(WorkLogDetails *logDetails, int labId, const string &secName, const string &d, const string &s, const string &e, bool leave)
+    {
+        WorkLog entry;
+        entry.labId = labId;
+        entry.sectionName = secName;
+        entry.actualTiming.Set(d, s, e);
+        entry.isLeave = leave;
+        logDetails->AddEntry(entry);
+        cout << "Time Sheet Filled.\n";
+    }
+
+public:
+    Attendant() : Person("Attendant") {}
+
+    void ShowMenu(WorkLogDetails *logDetails)
+    {
+        int choice;
+        while (true)
+        {
+            cout << "\n--- ATTENDANT DASHBOARD ---\n1. Fill Time Sheet\n2. Logout\nSelect: ";
+            InputOutput::SafeReadInt(choice);
+            if (choice == 1)
+            {
+                int id, leave;
+                string sec, d, s, e;
+                cout << "Lab ID: ";
+                InputOutput::SafeReadInt(id);
+                cout << "Section: ";
+                InputOutput::SafeReadString(sec);
+                cout << "Date: ";
+                InputOutput::SafeReadString(d);
+                cout << "Leave? (1/0): ";
+                InputOutput::SafeReadInt(leave);
+                if (!leave)
+                {
+                    cout << "Start: ";
+                    InputOutput::SafeReadString(s);
+                    cout << "End: ";
+                    InputOutput::SafeReadString(e);
+                }
+                FillTimeSheet(logDetails, id, sec, d, s, e, leave);
+            }
             else
                 return;
         }
@@ -489,10 +620,11 @@ class StorageManager
     LabDetails *labDetails;
     VenueDetails *venueDetails;
     FacultyDetails *facultyDetails;
+    WorkLogDetails *logDetails;
 
 public:
-    StorageManager(LabDetails *l, VenueDetails *v, FacultyDetails *f)
-        : labDetails(l), venueDetails(v), facultyDetails(f) {}
+    StorageManager(LabDetails *l, VenueDetails *v, FacultyDetails *f, WorkLogDetails *w)
+        : labDetails(l), venueDetails(v), facultyDetails(f), logDetails(w) {}
 
     void Save()
     {
@@ -506,7 +638,7 @@ public:
             for (const auto &sec : lab.sections)
             {
                 out << sec.sectionName << endl;
-                out << (sec.instructor ? sec.instructor->instructorId : -1) << endl;
+                out << (sec.teacher ? sec.teacher->teacherId : -1) << endl;
                 out << (sec.building ? sec.building->buildingId : -1) << endl;
                 out << (sec.room ? sec.room->roomId : -1) << endl;
                 out << sec.scheduleTime.date << " " << sec.scheduleTime.startTime << " " << sec.scheduleTime.endTime << endl;
@@ -520,50 +652,76 @@ public:
             }
         }
         out.close();
-        cout << "[System] Data saved to text file.\n";
+
+        // Save Work Logs
+        ofstream wout("logs_data.txt");
+        vector<WorkLog> &logs = logDetails->GetAllEntries();
+        wout << logs.size() << endl;
+        for (const auto &log : logs)
+        {
+            wout << log.labId << " " << log.sectionName << " " << log.isLeave << " "
+                 << log.actualTiming.date << " " << log.actualTiming.startTime << " " << log.actualTiming.endTime << endl;
+        }
+        wout.close();
+
+        cout << "[System] Data saved to text files.\n";
     }
 
     void Load()
     {
         ifstream in("labs_data.txt");
-        if (!in)
-            return;
-
-        int labCount;
-        in >> labCount;
-        for (int i = 0; i < labCount; i++)
+        if (in)
         {
-            CourseLaboratory lab;
-            int secCount;
-            in >> lab.labId >> lab.courseCode >> secCount;
-
-            for (int j = 0; j < secCount; j++)
+            int labCount;
+            in >> labCount;
+            for (int i = 0; i < labCount; i++)
             {
-                ClassSection sec;
-                int instId, buildId, roomId, taCount;
+                CourseLaboratory lab;
+                int secCount;
+                in >> lab.labId >> lab.courseCode >> secCount;
 
-                in >> sec.sectionName;
-                in >> instId >> buildId >> roomId;
-                in >> sec.scheduleTime.date >> sec.scheduleTime.startTime >> sec.scheduleTime.endTime;
-
-                sec.instructor = facultyDetails->FindInstructor(instId);
-                sec.building = venueDetails->FindBuilding(buildId);
-                sec.room = venueDetails->FindRoom(roomId);
-
-                in >> taCount;
-                for (int k = 0; k < taCount; k++)
+                for (int j = 0; j < secCount; j++)
                 {
-                    int taId;
-                    in >> taId;
-                    TeachingAssistant *ta = facultyDetails->FindTA(taId);
-                    if (ta)
-                        sec.AddTA(ta);
+                    ClassSection sec;
+                    int teachId, buildId, roomId, taCount;
+
+                    in >> sec.sectionName;
+                    in >> teachId >> buildId >> roomId;
+                    in >> sec.scheduleTime.date >> sec.scheduleTime.startTime >> sec.scheduleTime.endTime;
+
+                    sec.teacher = facultyDetails->FindTeacher(teachId);
+                    sec.building = venueDetails->FindBuilding(buildId);
+                    sec.room = venueDetails->FindRoom(roomId);
+
+                    in >> taCount;
+                    for (int k = 0; k < taCount; k++)
+                    {
+                        int taId;
+                        in >> taId;
+                        TeachingAssistant *ta = facultyDetails->FindTA(taId);
+                        if (ta)
+                            sec.AddTA(ta);
+                    }
+                    lab.AddSection(sec);
                 }
-                lab.AddSection(sec);
+                labDetails->AddLab(lab);
             }
-            labDetails->AddLab(lab);
+            in.close();
         }
-        in.close();
+
+        ifstream win("logs_data.txt");
+        if (win)
+        {
+            int logCount;
+            win >> logCount;
+            for (int i = 0; i < logCount; i++)
+            {
+                WorkLog log;
+                win >> log.labId >> log.sectionName >> log.isLeave >> log.actualTiming.date >> log.actualTiming.startTime >> log.actualTiming.endTime;
+                logDetails->AddEntry(log);
+            }
+            win.close();
+        }
     }
 };
 
@@ -571,41 +729,45 @@ public:
 
 int main()
 {
-    // Concrete implementations with InMemory prefix
     InMemoryLabDetails labDetails;
     InMemoryVenueDetails venueDetails;
     InMemoryFacultyDetails facultyDetails;
     InMemoryWorkLogDetails logDetails;
 
-    // Seed "Database"
     venueDetails.SeedData();
     facultyDetails.SeedData();
 
-    // Load relationships
-    StorageManager storage(&labDetails, &venueDetails, &facultyDetails);
+    StorageManager storage(&labDetails, &venueDetails, &facultyDetails, &logDetails);
     storage.Load();
 
-    Director director;
-    Coordinator coordinator;
+    HOD hod;
+    AcademicOfficer officer;
+    Instructor instructor;
+    Attendant attendant;
 
     while (true)
     {
-        cout << "\nSYSTEM\n1. Director\n2. Coordinator\n3. Save & Exit\nSelect: ";
+        cout << "\nSYSTEM\n1. HOD\n2. Academic Officer\n3. Instructor\n4. Attendant\n5. Save & Exit\nSelect: ";
         int role;
         InputOutput::SafeReadInt(role);
 
         switch (role)
         {
         case 1:
-            director.ShowMenu(&labDetails);
+            hod.ShowMenu(&labDetails, &logDetails);
             break;
         case 2:
-            coordinator.ShowMenu(&labDetails, &venueDetails, &facultyDetails);
+            officer.ShowMenu(&labDetails, &venueDetails, &facultyDetails);
             break;
         case 3:
+            instructor.ShowMenu(&labDetails);
+            break;
+        case 4:
+            attendant.ShowMenu(&logDetails);
+            break;
+        case 5:
             storage.Save();
             return 0;
         }
     }
-    return 0;
 }
