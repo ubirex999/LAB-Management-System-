@@ -4,13 +4,14 @@
 #include <string>
 #include <iomanip>
 #include <algorithm>
-#include <sstream>
 #include <map>
 #include <set>
 
 using namespace std;
 
+// ==========================================
 // UTILITY CLASSES
+// ==========================================
 
 class InputOutput
 {
@@ -23,16 +24,11 @@ public:
             cin.ignore(1000, '\n');
             val = -1;
         }
+        cin.ignore(1000, '\n'); // Consume newline
     }
 
     static void SafeReadString(string &val)
     {
-        cin >> val;
-    }
-
-    static void SafeReadLine(string &val)
-    {
-        cin.ignore();
         getline(cin, val);
     }
 };
@@ -66,90 +62,105 @@ public:
         int m2 = stoi(end.substr(3, 2));
         return (h1 * 60 + m1) < (h2 * 60 + m2);
     }
-
-    static bool IsValidCourseCode(const string &c)
-    {
-        return c.length() >= 4;
-    }
-
-    static bool IsValidDate(const string &d)
-    {
-        return d.length() >= 5;
-    }
 };
 
+// ==========================================
 // CORE DOMAIN ENTITIES
+// ==========================================
 
 class DateAndTime
 {
-public:
+private:
     string date;
     string startTime;
     string endTime;
 
+public:
     void Set(const string &d, const string &s, const string &e)
     {
         date = d;
         startTime = s;
         endTime = e;
     }
+    string GetDate() const { return date; }
+    string GetStartTime() const { return startTime; }
+    string GetEndTime() const { return endTime; }
 };
 
 class CampusBlock
 {
-public:
+private:
     int buildingId;
     string name;
 
+public:
     CampusBlock() : buildingId(0) {}
     CampusBlock(int id, string n) : buildingId(id), name(n) {}
+
+    int GetId() const { return buildingId; }
+    string GetName() const { return name; }
 };
 
 class LectureHall
 {
-public:
+private:
     int roomId;
     int roomNumber;
-    CampusBlock *building; // Aggregation relationship
+    int buildingId;        // Stored for serialization
+    CampusBlock *building; // Runtime pointer
 
-    LectureHall() : roomId(0), roomNumber(0), building(nullptr) {}
-    LectureHall(int id, int num, CampusBlock *bldg) : roomId(id), roomNumber(num), building(bldg) {}
+public:
+    LectureHall() : roomId(0), roomNumber(0), buildingId(0), building(nullptr) {}
+    LectureHall(int id, int num, int bId, CampusBlock *bldg)
+        : roomId(id), roomNumber(num), buildingId(bId), building(bldg) {}
+
+    int GetId() const { return roomId; }
+    int GetRoomNumber() const { return roomNumber; }
+    int GetBuildingId() const { return buildingId; }
+    CampusBlock *GetBuilding() const { return building; }
+    
+    void SetBuilding(CampusBlock* b) { building = b; } // Used during loading
 };
 
-// Renamed to UniversityTeacher to avoid collision with the 'Instructor' Person class
 class UniversityTeacher
 {
-public:
+private:
     int teacherId;
     string name;
 
+public:
     UniversityTeacher() : teacherId(0) {}
     UniversityTeacher(int id, string n) : teacherId(id), name(n) {}
+
+    int GetId() const { return teacherId; }
+    string GetName() const { return name; }
 };
 
 class TeachingAssistant
 {
-public:
+private:
     int taId;
     string name;
 
+public:
     TeachingAssistant() : taId(0) {}
     TeachingAssistant(int id, string n) : taId(id), name(n) {}
+
+    int GetId() const { return taId; }
+    string GetName() const { return name; }
 };
 
 class ClassSection
 {
-public:
+private:
     string sectionName;
-
-    // Using Pointers to domain objects
     UniversityTeacher *teacher;
     vector<TeachingAssistant *> assistants;
-
     CampusBlock *building;
     LectureHall *room;
     DateAndTime scheduleTime;
 
+public:
     ClassSection() : teacher(nullptr), building(nullptr), room(nullptr) {}
 
     void SetDetails(string name, UniversityTeacher *t, CampusBlock *b, LectureHall *r)
@@ -164,15 +175,30 @@ public:
     {
         assistants.push_back(ta);
     }
+
+    string GetSectionName() const { return sectionName; }
+    UniversityTeacher *GetTeacher() const { return teacher; }
+    const vector<TeachingAssistant *> &GetAssistants() const { return assistants; }
+    CampusBlock *GetBuilding() const { return building; }
+    LectureHall *GetRoom() const { return room; }
+    DateAndTime &GetScheduleTime() { return scheduleTime; }
+    const DateAndTime &GetScheduleTime() const { return scheduleTime; }
+
+    // Setters for Loading
+    void SetSectionName(const string &n) { sectionName = n; }
+    void SetTeacher(UniversityTeacher *t) { teacher = t; }
+    void SetBuilding(CampusBlock *b) { building = b; }
+    void SetRoom(LectureHall *r) { room = r; }
 };
 
 class CourseLaboratory
 {
-public:
+private:
     int labId;
     string courseCode;
     vector<ClassSection> sections;
 
+public:
     CourseLaboratory() : labId(0) {}
 
     void AddSection(const ClassSection &s)
@@ -184,39 +210,70 @@ public:
     {
         for (auto &s : sections)
         {
-            if (s.sectionName == secName)
+            if (s.GetSectionName() == secName)
                 return &s;
         }
         return nullptr;
     }
+
+    int GetLabId() const { return labId; }
+    void SetLabId(int id) { labId = id; }
+    string GetCourseCode() const { return courseCode; }
+    void SetCourseCode(const string &code) { courseCode = code; }
+    vector<ClassSection> &GetSections() { return sections; }
+    const vector<ClassSection> &GetSections() const { return sections; }
 };
 
 class WorkLog
 {
-public:
+private:
     int labId;
     string sectionName;
     DateAndTime actualTiming;
     bool isLeave;
 
+public:
     WorkLog() : labId(0), isLeave(false) {}
+
+    int GetLabId() const { return labId; }
+    void SetLabId(int id) { labId = id; }
+    string GetSectionName() const { return sectionName; }
+    void SetSectionName(const string &n) { sectionName = n; }
+    const DateAndTime &GetActualTiming() const { return actualTiming; }
+    DateAndTime &GetActualTiming() { return actualTiming; }
+    bool GetIsLeave() const { return isLeave; }
+    void SetIsLeave(bool l) { isLeave = l; }
 };
 
 class MakeupLabRequest
 {
-public:
-    CourseLaboratory *lab; // Pointer to CourseLaboratory
+private:
+    CourseLaboratory *lab;
     string sectionName;
     string requestedStartTime;
     string requestedEndTime;
     string requestedDate;
 
+public:
     MakeupLabRequest() : lab(nullptr) {}
     MakeupLabRequest(CourseLaboratory *l, const string &sec, const string &date, const string &start, const string &end)
         : lab(l), sectionName(sec), requestedDate(date), requestedStartTime(start), requestedEndTime(end) {}
+
+    CourseLaboratory *GetLab() const { return lab; }
+    void SetLab(CourseLaboratory *l) { lab = l; }
+    string GetSectionName() const { return sectionName; }
+    void SetSectionName(const string &s) { sectionName = s; }
+    string GetRequestedDate() const { return requestedDate; }
+    void SetRequestedDate(const string &d) { requestedDate = d; }
+    string GetRequestedStartTime() const { return requestedStartTime; }
+    void SetRequestedStartTime(const string &s) { requestedStartTime = s; }
+    string GetRequestedEndTime() const { return requestedEndTime; }
+    void SetRequestedEndTime(const string &e) { requestedEndTime = e; }
 };
 
-// DETAILS INTERFACES
+// ==========================================
+// DETAILS INTERFACES & IMPLEMENTATIONS
+// ==========================================
 
 class LabDetails
 {
@@ -237,9 +294,12 @@ public:
 class VenueDetails
 {
 public:
+    virtual void AddBuilding(const CampusBlock &b) = 0;
+    virtual void AddRoom(const LectureHall &r) = 0;
     virtual CampusBlock *FindBuilding(int id) = 0;
     virtual LectureHall *FindRoom(int id) = 0;
-    virtual void SeedData() = 0;
+    virtual vector<CampusBlock>& GetAllBuildings() = 0;
+    virtual vector<LectureHall>& GetAllRooms() = 0;
 };
 
 class FacultyDetails
@@ -249,23 +309,21 @@ public:
     virtual void AddTA(const TeachingAssistant &t) = 0;
     virtual UniversityTeacher *FindTeacher(int id) = 0;
     virtual TeachingAssistant *FindTA(int id) = 0;
-    virtual void SeedData() = 0;
+    virtual vector<UniversityTeacher>& GetAllTeachers() = 0;
+    virtual vector<TeachingAssistant>& GetAllTAs() = 0;
 };
 
-// CONCRETE IMPLEMENTATIONS
+// --- Implementations ---
 
 class InMemoryLabDetails : public LabDetails
 {
     vector<CourseLaboratory> labs;
-
 public:
     void AddLab(const CourseLaboratory &l) override { labs.push_back(l); }
     void UpdateLab(const CourseLaboratory &l) override
     {
-        for (auto &existing : labs)
-        {
-            if (existing.labId == l.labId)
-            {
+        for (auto &existing : labs) {
+            if (existing.GetLabId() == l.GetLabId()) {
                 existing = l;
                 return;
             }
@@ -273,9 +331,7 @@ public:
     }
     CourseLaboratory *FindLab(int id) override
     {
-        for (auto &l : labs)
-            if (l.labId == id)
-                return &l;
+        for (auto &l : labs) if (l.GetLabId() == id) return &l;
         return nullptr;
     }
     vector<CourseLaboratory> &GetAllLabs() override { return labs; }
@@ -284,7 +340,6 @@ public:
 class InMemoryWorkLogDetails : public WorkLogDetails
 {
     vector<WorkLog> logs;
-
 public:
     void AddEntry(const WorkLog &entry) override { logs.push_back(entry); }
     vector<WorkLog> &GetAllEntries() override { return logs; }
@@ -294,85 +349,54 @@ class InMemoryVenueDetails : public VenueDetails
 {
     vector<CampusBlock> buildings;
     vector<LectureHall> rooms;
-
 public:
+    void AddBuilding(const CampusBlock &b) override { buildings.push_back(b); }
+    void AddRoom(const LectureHall &r) override { rooms.push_back(r); }
+    
     CampusBlock *FindBuilding(int id) override
     {
-        for (auto &b : buildings)
-            if (b.buildingId == id)
-                return &b;
+        for (auto &b : buildings) if (b.GetId() == id) return &b;
         return nullptr;
     }
     LectureHall *FindRoom(int id) override
     {
-        for (auto &r : rooms)
-            if (r.roomId == id)
-                return &r;
+        for (auto &r : rooms) if (r.GetId() == id) return &r;
         return nullptr;
     }
-    void SeedData() override
-    {
-        if (buildings.empty())
-        {
-            buildings.push_back(CampusBlock(1, "CS Block"));
-            buildings.push_back(CampusBlock(2, "EE Block"));
-        }
-        if (rooms.empty())
-        {
-            // Room 101 belongs to CS Block (ID: 1)
-            rooms.push_back(LectureHall(101, 101, &buildings[0]));
-            // Room 102 belongs to EE Block (ID: 2)
-            rooms.push_back(LectureHall(102, 102, &buildings[1]));
-        }
-    }
+    vector<CampusBlock>& GetAllBuildings() override { return buildings; }
+    vector<LectureHall>& GetAllRooms() override { return rooms; }
 };
 
 class InMemoryFacultyDetails : public FacultyDetails
 {
     vector<UniversityTeacher> teachers;
     vector<TeachingAssistant> tas;
-
 public:
     void AddTeacher(const UniversityTeacher &t) override { teachers.push_back(t); }
     void AddTA(const TeachingAssistant &t) override { tas.push_back(t); }
 
     UniversityTeacher *FindTeacher(int id) override
     {
-        for (auto &t : teachers)
-            if (t.teacherId == id)
-                return &t;
+        for (auto &t : teachers) if (t.GetId() == id) return &t;
         return nullptr;
     }
     TeachingAssistant *FindTA(int id) override
     {
-        for (auto &t : tas)
-            if (t.taId == id)
-                return &t;
+        for (auto &t : tas) if (t.GetId() == id) return &t;
         return nullptr;
     }
-    void SeedData() override
-    {
-        if (teachers.empty())
-        {
-            teachers.push_back(UniversityTeacher(1, "Dr. Smith"));
-            teachers.push_back(UniversityTeacher(2, "Dr. Jones"));
-        }
-        if (tas.empty())
-        {
-            tas.push_back(TeachingAssistant(101, "Alice"));
-            tas.push_back(TeachingAssistant(102, "Bob"));
-            tas.push_back(TeachingAssistant(103, "Charlie"));
-        }
-    }
+    vector<UniversityTeacher>& GetAllTeachers() override { return teachers; }
+    vector<TeachingAssistant>& GetAllTAs() override { return tas; }
 };
 
-// ACTOR ROLES (Restored to original names)
+// ==========================================
+// ROLES
+// ==========================================
 
 class Person
 {
 protected:
     string roleName;
-
 public:
     Person(const string &n) : roleName(n) {}
     virtual ~Person() {}
@@ -390,24 +414,19 @@ private:
         return (float)((h2 * 60 + m2) - (h1 * 60 + m1)) / 60.0f;
     }
 
-    // Helper function to extract day from date string (assuming format like "Monday", "Tuesday", etc.)
     string ExtractDay(const string &date)
     {
-        // If date contains day name, extract it; otherwise return the date as-is
         vector<string> days = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
         for (const string &day : days)
         {
             if (date.find(day) != string::npos)
                 return day;
         }
-        return date; // Return original if no day name found
+        return date;
     }
 
-    // Helper function to check if a date falls within a given week
     bool IsDateInWeek(const string &date, const string &weekIdentifier)
     {
-        // Simple implementation: check if week identifier is in the date string
-        // This can be enhanced with proper date parsing
         return date.find(weekIdentifier) != string::npos || weekIdentifier == "all";
     }
 
@@ -416,101 +435,61 @@ private:
         cout << "\n========================================\n";
         cout << "    COMPLETE LAB SCHEDULE - ENTIRE WEEK\n";
         cout << "========================================\n\n";
-        
+
         vector<CourseLaboratory> &labs = lDetails->GetAllLabs();
-        
+
         if (labs.empty())
         {
             cout << "No labs scheduled for the week.\n";
             cout << "\n========================================\n";
             return;
         }
-        
-        // Group sections by day
-        map<string, vector<pair<CourseLaboratory*, ClassSection*>>> scheduleByDay;
-        
+
+        map<string, vector<pair<CourseLaboratory *, ClassSection *>>> scheduleByDay;
         for (auto &lab : labs)
         {
-            for (auto &sec : lab.sections)
+            for (auto &sec : lab.GetSections())
             {
-                string day = ExtractDay(sec.scheduleTime.date);
+                string day = ExtractDay(sec.GetScheduleTime().GetDate());
                 scheduleByDay[day].push_back({&lab, &sec});
             }
         }
-        
-        // Define day order
+
         vector<string> dayOrder = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
-        
-        // Display schedule organized by day
+
         for (const string &day : dayOrder)
         {
             if (scheduleByDay.find(day) != scheduleByDay.end())
             {
                 cout << "\n=== " << day << " ===\n";
                 cout << string(50, '-') << "\n";
-                
+
                 for (const auto &entry : scheduleByDay[day])
                 {
                     CourseLaboratory *lab = entry.first;
                     ClassSection *sec = entry.second;
-                    
-                    cout << "\nLab ID: " << lab->labId << " | Course: " << lab->courseCode << "\n";
-                    cout << "  Section: " << sec->sectionName << "\n";
-                    cout << "  Time: " << sec->scheduleTime.startTime << " - " << sec->scheduleTime.endTime << "\n";
-                    cout << "  Venue: " << (sec->building ? sec->building->name : "N/A")
-                         << " - Room " << (sec->room ? to_string(sec->room->roomNumber) : "N/A") << "\n";
-                    cout << "  Instructor: " << (sec->teacher ? sec->teacher->name : "Unassigned") << "\n";
+
+                    cout << "\nLab ID: " << lab->GetLabId() << " | Course: " << lab->GetCourseCode() << "\n";
+                    cout << "  Section: " << sec->GetSectionName() << "\n";
+                    cout << "  Time: " << sec->GetScheduleTime().GetStartTime() << " - " << sec->GetScheduleTime().GetEndTime() << "\n";
+                    cout << "  Venue: " << (sec->GetBuilding() ? sec->GetBuilding()->GetName() : "N/A")
+                         << " - Room " << (sec->GetRoom() ? to_string(sec->GetRoom()->GetRoomNumber()) : "N/A") << "\n";
+                    cout << "  Instructor: " << (sec->GetTeacher() ? sec->GetTeacher()->GetName() : "Unassigned") << "\n";
                     cout << "  TAs: ";
-                    if (sec->assistants.empty())
-                    {
-                        cout << "None assigned\n";
-                    }
+                    if (sec->GetAssistants().empty()) cout << "None assigned\n";
                     else
                     {
-                        for (size_t i = 0; i < sec->assistants.size(); i++)
+                        const auto &tas = sec->GetAssistants();
+                        for (size_t i = 0; i < tas.size(); i++)
                         {
-                            cout << (sec->assistants[i] ? sec->assistants[i]->name : "Unknown");
-                            if (i < sec->assistants.size() - 1)
-                                cout << ", ";
+                            cout << (tas[i] ? tas[i]->GetName() : "Unknown");
+                            if (i < tas.size() - 1) cout << ", ";
                         }
                         cout << "\n";
                     }
                 }
             }
         }
-        
-        // Display any sections with unrecognized day format
-        for (const auto &entry : scheduleByDay)
-        {
-            bool found = false;
-            for (const string &day : dayOrder)
-            {
-                if (entry.first == day)
-                {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found)
-            {
-                cout << "\n=== " << entry.first << " ===\n";
-                cout << string(50, '-') << "\n";
-                
-                for (const auto &pair : entry.second)
-                {
-                    CourseLaboratory *lab = pair.first;
-                    ClassSection *sec = pair.second;
-                    
-                    cout << "\nLab ID: " << lab->labId << " | Course: " << lab->courseCode << "\n";
-                    cout << "  Section: " << sec->sectionName << "\n";
-                    cout << "  Time: " << sec->scheduleTime.startTime << " - " << sec->scheduleTime.endTime << "\n";
-                    cout << "  Venue: " << (sec->building ? sec->building->name : "N/A")
-                         << " - Room " << (sec->room ? to_string(sec->room->roomNumber) : "N/A") << "\n";
-                    cout << "  Instructor: " << (sec->teacher ? sec->teacher->name : "Unassigned") << "\n";
-                }
-            }
-        }
-        
         cout << "\n========================================\n";
     }
 
@@ -519,79 +498,68 @@ private:
         cout << "\n========================================\n";
         cout << "    FILLED TIME SHEETS - WEEKLY REPORT\n";
         cout << "========================================\n\n";
-        
+
         string weekInput;
         cout << "Enter week identifier (e.g., 'Week1', 'Week2', or 'all' for all weeks): ";
         InputOutput::SafeReadString(weekInput);
-        
+
         vector<WorkLog> &logs = logDetails->GetAllEntries();
         vector<WorkLog> filteredLogs;
-        
-        // Filter logs for the specified week
+
         for (const auto &log : logs)
         {
-            if (IsDateInWeek(log.actualTiming.date, weekInput))
-            {
-                filteredLogs.push_back(log);
-            }
+            if (IsDateInWeek(log.GetActualTiming().GetDate(), weekInput)) filteredLogs.push_back(log);
         }
-        
+
         if (filteredLogs.empty())
         {
             cout << "No time sheet entries found for " << weekInput << ".\n";
-            cout << "\n========================================\n";
             return;
         }
-        
+
         cout << "\nTime Sheet Entries for " << weekInput << ":\n";
         cout << string(80, '-') << "\n";
-        cout << left << setw(8) << "Lab ID" << setw(15) << "Course Code" << setw(12) << "Section" 
-             << setw(15) << "Date" << setw(12) << "Start Time" << setw(12) << "End Time" 
+        cout << left << setw(8) << "Lab ID" << setw(15) << "Course Code" << setw(12) << "Section"
+             << setw(15) << "Date" << setw(12) << "Start Time" << setw(12) << "End Time"
              << setw(10) << "Status" << setw(15) << "Instructor" << endl;
         cout << string(80, '-') << "\n";
-        
+
         for (const auto &log : filteredLogs)
         {
-            CourseLaboratory *lab = lDetails->FindLab(log.labId);
-            string courseCode = lab ? lab->courseCode : "N/A";
-            
+            CourseLaboratory *lab = lDetails->FindLab(log.GetLabId());
+            string courseCode = lab ? lab->GetCourseCode() : "N/A";
             ClassSection *sec = nullptr;
             string instructorName = "N/A";
             if (lab)
             {
-                sec = lab->FindSection(log.sectionName);
-                if (sec && sec->teacher)
-                {
-                    instructorName = sec->teacher->name;
-                }
+                sec = lab->FindSection(log.GetSectionName());
+                if (sec && sec->GetTeacher()) instructorName = sec->GetTeacher()->GetName();
             }
-            
-            cout << left << setw(8) << log.labId 
+
+            cout << left << setw(8) << log.GetLabId()
                  << setw(15) << courseCode
-                 << setw(12) << log.sectionName
-                 << setw(15) << log.actualTiming.date
-                 << setw(12) << (log.isLeave ? "N/A" : log.actualTiming.startTime)
-                 << setw(12) << (log.isLeave ? "N/A" : log.actualTiming.endTime)
-                 << setw(10) << (log.isLeave ? "LEAVE" : "PRESENT")
+                 << setw(12) << log.GetSectionName()
+                 << setw(15) << log.GetActualTiming().GetDate()
+                 << setw(12) << (log.GetIsLeave() ? "N/A" : log.GetActualTiming().GetStartTime())
+                 << setw(12) << (log.GetIsLeave() ? "N/A" : log.GetActualTiming().GetEndTime())
+                 << setw(10) << (log.GetIsLeave() ? "LEAVE" : "PRESENT")
                  << setw(15) << instructorName << endl;
         }
-        
-        // Summary statistics
+
         int presentCount = 0;
         int leaveCount = 0;
         float totalHours = 0.0f;
-        
+
         for (const auto &log : filteredLogs)
         {
-            if (log.isLeave)
-                leaveCount++;
+            if (log.GetIsLeave()) leaveCount++;
             else
             {
                 presentCount++;
-                totalHours += CalculateHours(log.actualTiming.startTime, log.actualTiming.endTime);
+                totalHours += CalculateHours(log.GetActualTiming().GetStartTime(), log.GetActualTiming().GetEndTime());
             }
         }
-        
+
         cout << "\n" << string(80, '-') << "\n";
         cout << "SUMMARY:\n";
         cout << "  Total Entries: " << filteredLogs.size() << "\n";
@@ -603,137 +571,49 @@ private:
 
     void GenerateLabSpecificTimeSheet(LabDetails *lDetails, WorkLogDetails *logDetails)
     {
-        cout << "\n========================================\n";
-        cout << "    LAB-SPECIFIC TIME SHEET REPORT\n";
-        cout << "========================================\n\n";
-        
         int labId;
-        cout << "Enter Lab ID: ";
-        InputOutput::SafeReadInt(labId);
-        
+        cout << "Enter Lab ID: "; InputOutput::SafeReadInt(labId);
         CourseLaboratory *lab = lDetails->FindLab(labId);
-        if (!lab)
-        {
-            cout << "Error: Lab ID " << labId << " not found.\n";
-            cout << "\n========================================\n";
-            return;
-        }
-        
-        cout << "\nLab ID: " << lab->labId << " | Course: " << lab->courseCode << "\n";
+        if (!lab) { cout << "Error: Lab ID not found.\n"; return; }
+
+        cout << "\nLab ID: " << lab->GetLabId() << " | Course: " << lab->GetCourseCode() << "\n";
         cout << string(80, '-') << "\n\n";
-        
+
         vector<WorkLog> &logs = logDetails->GetAllEntries();
         vector<WorkLog> labLogs;
-        
-        // Filter logs for this specific lab
-        for (const auto &log : logs)
-        {
-            if (log.labId == labId)
-            {
-                labLogs.push_back(log);
-            }
-        }
-        
-        if (labLogs.empty())
-        {
-            cout << "No time sheet entries found for this lab.\n";
-            cout << "\n========================================\n";
-            return;
-        }
-        
-        // Display all sessions for this lab
+        for (const auto &log : logs) if (log.GetLabId() == labId) labLogs.push_back(log);
+
+        if (labLogs.empty()) { cout << "No time sheet entries found for this lab.\n"; return; }
+
         cout << "ALL SESSIONS TIME SHEET:\n";
         cout << string(80, '-') << "\n";
-        cout << left << setw(12) << "Section" << setw(15) << "Date" 
-             << setw(12) << "Start Time" << setw(12) << "End Time" 
-             << setw(10) << "Status" << setw(15) << "Instructor" << endl;
+        cout << left << setw(12) << "Section" << setw(15) << "Date" << setw(12) << "Start" << setw(12) << "End" << setw(10) << "Status" << endl;
         cout << string(80, '-') << "\n";
-        
+
         float totalContactHours = 0.0f;
-        int totalLeaves = 0;
-        int totalPresent = 0;
-        map<string, int> sectionLeaves; // section -> leave count
-        map<string, float> sectionHours; // section -> total hours
-        
+        int totalLeaves = 0, totalPresent = 0;
+
         for (const auto &log : labLogs)
         {
-            ClassSection *sec = lab->FindSection(log.sectionName);
-            string instructorName = "N/A";
-            if (sec && sec->teacher)
-            {
-                instructorName = sec->teacher->name;
-            }
-            
             float hours = 0.0f;
-            if (!log.isLeave)
+            if (!log.GetIsLeave())
             {
-                hours = CalculateHours(log.actualTiming.startTime, log.actualTiming.endTime);
+                hours = CalculateHours(log.GetActualTiming().GetStartTime(), log.GetActualTiming().GetEndTime());
                 totalContactHours += hours;
                 totalPresent++;
-                sectionHours[log.sectionName] += hours;
             }
-            else
-            {
-                totalLeaves++;
-                sectionLeaves[log.sectionName]++;
-            }
-            
-            cout << left << setw(12) << log.sectionName
-                 << setw(15) << log.actualTiming.date
-                 << setw(12) << (log.isLeave ? "N/A" : log.actualTiming.startTime)
-                 << setw(12) << (log.isLeave ? "N/A" : log.actualTiming.endTime)
-                 << setw(10) << (log.isLeave ? "LEAVE" : "PRESENT")
-                 << setw(15) << instructorName;
-            if (!log.isLeave)
-                cout << " (" << fixed << setprecision(2) << hours << " hrs)";
-            cout << endl;
+            else totalLeaves++;
+
+            cout << left << setw(12) << log.GetSectionName()
+                 << setw(15) << log.GetActualTiming().GetDate()
+                 << setw(12) << (log.GetIsLeave() ? "N/A" : log.GetActualTiming().GetStartTime())
+                 << setw(12) << (log.GetIsLeave() ? "N/A" : log.GetActualTiming().GetEndTime())
+                 << setw(10) << (log.GetIsLeave() ? "LEAVE" : "PRESENT") << endl;
         }
-        
-        // Summary by section
-        cout << "\n" << string(80, '-') << "\n";
-        cout << "SECTION-WISE SUMMARY:\n";
-        cout << string(80, '-') << "\n";
-        cout << left << setw(12) << "Section" << setw(15) << "Total Hours" 
-             << setw(12) << "Present" << setw(12) << "Leaves" << endl;
-        cout << string(80, '-') << "\n";
-        
-        set<string> allSections;
-        for (const auto &log : labLogs)
-        {
-            allSections.insert(log.sectionName);
-        }
-        
-        for (const string &secName : allSections)
-        {
-            int presentCount = 0;
-            for (const auto &log : labLogs)
-            {
-                if (log.sectionName == secName && !log.isLeave)
-                    presentCount++;
-            }
-            
-            cout << left << setw(12) << secName
-                 << setw(15) << fixed << setprecision(2) << sectionHours[secName]
-                 << setw(12) << presentCount
-                 << setw(12) << sectionLeaves[secName] << endl;
-        }
-        
-        // Overall summary
-        cout << "\n" << string(80, '-') << "\n";
-        cout << "OVERALL SUMMARY FOR LAB " << labId << " (" << lab->courseCode << "):\n";
-        cout << string(80, '-') << "\n";
-        cout << "  Total Sessions: " << labLogs.size() << "\n";
-        cout << "  Present Sessions: " << totalPresent << "\n";
-        cout << "  Leave Sessions: " << totalLeaves << "\n";
-        cout << "  Total Contact Hours: " << fixed << setprecision(2) << totalContactHours << " hours\n";
-        cout << "  Average Hours per Session: " << fixed << setprecision(2) 
-             << (totalPresent > 0 ? totalContactHours / totalPresent : 0.0f) << " hours\n";
-        cout << "\n========================================\n";
     }
 
 public:
-    HOD() : Person("Head of Department") {}
-
+    HOD() : Person("HOD") {}
     void ShowMenu(LabDetails *lDetails, WorkLogDetails *wDetails)
     {
         int choice;
@@ -746,14 +626,10 @@ public:
             cout << "4. Logout\n";
             cout << "Select: ";
             InputOutput::SafeReadInt(choice);
-            if (choice == 1)
-                GenerateCompleteWeeklySchedule(lDetails);
-            else if (choice == 2)
-                GenerateWeeklyTimeSheetReport(lDetails, wDetails);
-            else if (choice == 3)
-                GenerateLabSpecificTimeSheet(lDetails, wDetails);
-            else
-                return;
+            if (choice == 1) GenerateCompleteWeeklySchedule(lDetails);
+            else if (choice == 2) GenerateWeeklyTimeSheetReport(lDetails, wDetails);
+            else if (choice == 3) GenerateLabSpecificTimeSheet(lDetails, wDetails);
+            else return;
         }
     }
 };
@@ -765,331 +641,131 @@ private:
     {
         vector<MakeupLabRequest> requests;
         ifstream in("makeup_requests.dat", ios::binary);
-        
-        if (!in.is_open())
-        {
-            return requests; // Return empty vector if file doesn't exist
-        }
+        if (!in.is_open()) return requests;
 
         while (in.peek() != EOF)
         {
             MakeupLabRequest request;
-            
-            // Read labId
-            int labId;
-            in.read(reinterpret_cast<char *>(&labId), sizeof(int));
-            if (in.eof())
-                break;
-            
-            // Find the lab by ID and set the pointer
-            request.lab = lDetails->FindLab(labId);
-            
-            // Read sectionName
-            int secLen;
-            in.read(reinterpret_cast<char *>(&secLen), sizeof(int));
-            if (in.eof())
-                break;
-            char *secBuf = new char[secLen + 1];
-            in.read(secBuf, secLen);
-            secBuf[secLen] = '\0';
-            request.sectionName = string(secBuf);
-            delete[] secBuf;
-            
-            // Read requestedDate
-            int dateLen;
-            in.read(reinterpret_cast<char *>(&dateLen), sizeof(int));
-            if (in.eof())
-                break;
-            char *dateBuf = new char[dateLen + 1];
-            in.read(dateBuf, dateLen);
-            dateBuf[dateLen] = '\0';
-            request.requestedDate = string(dateBuf);
-            delete[] dateBuf;
-            
-            // Read requestedStartTime
-            int startLen;
-            in.read(reinterpret_cast<char *>(&startLen), sizeof(int));
-            if (in.eof())
-                break;
-            char *startBuf = new char[startLen + 1];
-            in.read(startBuf, startLen);
-            startBuf[startLen] = '\0';
-            request.requestedStartTime = string(startBuf);
-            delete[] startBuf;
-            
-            // Read requestedEndTime
-            int endLen;
-            in.read(reinterpret_cast<char *>(&endLen), sizeof(int));
-            if (in.eof())
-                break;
-            char *endBuf = new char[endLen + 1];
-            in.read(endBuf, endLen);
-            endBuf[endLen] = '\0';
-            request.requestedEndTime = string(endBuf);
-            delete[] endBuf;
-            
+            int labId; in.read(reinterpret_cast<char *>(&labId), sizeof(int));
+            if (in.eof()) break;
+
+            request.SetLab(lDetails->FindLab(labId));
+
+            int secLen; in.read(reinterpret_cast<char *>(&secLen), sizeof(int));
+            if (in.eof()) break;
+            char *secBuf = new char[secLen + 1]; in.read(secBuf, secLen); secBuf[secLen] = '\0';
+            request.SetSectionName(string(secBuf)); delete[] secBuf;
+
+            int dateLen; in.read(reinterpret_cast<char *>(&dateLen), sizeof(int));
+            if (in.eof()) break;
+            char *dateBuf = new char[dateLen + 1]; in.read(dateBuf, dateLen); dateBuf[dateLen] = '\0';
+            request.SetRequestedDate(string(dateBuf)); delete[] dateBuf;
+
+            int startLen; in.read(reinterpret_cast<char *>(&startLen), sizeof(int));
+            if (in.eof()) break;
+            char *startBuf = new char[startLen + 1]; in.read(startBuf, startLen); startBuf[startLen] = '\0';
+            request.SetRequestedStartTime(string(startBuf)); delete[] startBuf;
+
+            int endLen; in.read(reinterpret_cast<char *>(&endLen), sizeof(int));
+            if (in.eof()) break;
+            char *endBuf = new char[endLen + 1]; in.read(endBuf, endLen); endBuf[endLen] = '\0';
+            request.SetRequestedEndTime(string(endBuf)); delete[] endBuf;
+
             requests.push_back(request);
         }
-        
         in.close();
         return requests;
     }
 
     void WriteMakeupRequestsToBinary(const vector<MakeupLabRequest> &requests)
     {
-        // Open file in truncate mode to overwrite existing content
         ofstream out("makeup_requests.dat", ios::binary | ios::trunc);
-        if (!out.is_open())
-        {
-            cout << "Error: Could not write to makeup requests file.\n";
-            return;
-        }
+        if (!out.is_open()) return;
 
         for (const auto &request : requests)
         {
-            // Write labId (from the pointer)
-            int labId = (request.lab ? request.lab->labId : -1);
+            int labId = (request.GetLab() ? request.GetLab()->GetLabId() : -1);
             out.write(reinterpret_cast<const char *>(&labId), sizeof(int));
-            
-            // Write sectionName length and string
-            int secLen = request.sectionName.length();
-            out.write(reinterpret_cast<const char *>(&secLen), sizeof(int));
-            out.write(request.sectionName.c_str(), secLen);
-            
-            // Write requestedDate length and string
-            int dateLen = request.requestedDate.length();
-            out.write(reinterpret_cast<const char *>(&dateLen), sizeof(int));
-            out.write(request.requestedDate.c_str(), dateLen);
-            
-            // Write requestedStartTime length and string
-            int startLen = request.requestedStartTime.length();
-            out.write(reinterpret_cast<const char *>(&startLen), sizeof(int));
-            out.write(request.requestedStartTime.c_str(), startLen);
-            
-            // Write requestedEndTime length and string
-            int endLen = request.requestedEndTime.length();
-            out.write(reinterpret_cast<const char *>(&endLen), sizeof(int));
-            out.write(request.requestedEndTime.c_str(), endLen);
+
+            string secName = request.GetSectionName(); int secLen = secName.length();
+            out.write(reinterpret_cast<const char *>(&secLen), sizeof(int)); out.write(secName.c_str(), secLen);
+
+            string date = request.GetRequestedDate(); int dateLen = date.length();
+            out.write(reinterpret_cast<const char *>(&dateLen), sizeof(int)); out.write(date.c_str(), dateLen);
+
+            string start = request.GetRequestedStartTime(); int startLen = start.length();
+            out.write(reinterpret_cast<const char *>(&startLen), sizeof(int)); out.write(start.c_str(), startLen);
+
+            string end = request.GetRequestedEndTime(); int endLen = end.length();
+            out.write(reinterpret_cast<const char *>(&endLen), sizeof(int)); out.write(end.c_str(), endLen);
         }
-        
         out.close();
     }
 
-    void ViewMakeupRequests(LabDetails *lDetails)
-    {
-        vector<MakeupLabRequest> requests = ReadMakeupRequestsFromBinary(lDetails);
-        
-        if (requests.empty())
-        {
-            cout << "\nNo makeup lab requests found.\n";
-            return;
-        }
-        
-        cout << "\n--- MAKEUP LAB REQUESTS ---\n";
-        cout << left << setw(8) << "Lab ID" << setw(15) << "Course Code" << setw(12) << "Section" << setw(15) << "Date" 
-             << setw(12) << "Start Time" << setw(12) << "End Time" << endl;
-        cout << string(80, '-') << endl;
-        
-        for (const auto &req : requests)
-        {
-            int labId = (req.lab ? req.lab->labId : -1);
-            string courseCode = (req.lab ? req.lab->courseCode : "N/A");
-            cout << left << setw(8) << labId << setw(15) << courseCode << setw(12) << req.sectionName 
-                 << setw(15) << req.requestedDate << setw(12) << req.requestedStartTime 
-                 << setw(12) << req.requestedEndTime << endl;
-        }
+public:
+    AcademicOfficer() : Person("Academic Officer") {}
+
+    // --- Dynamic Infrastructure Methods ---
+    void AddBuilding(VenueDetails *vDetails) {
+        int id; string name;
+        cout << "Enter Building ID: "; InputOutput::SafeReadInt(id);
+        if(vDetails->FindBuilding(id)) { cout << "ID exists.\n"; return; }
+        cout << "Enter Building Name: "; InputOutput::SafeReadString(name);
+        vDetails->AddBuilding(CampusBlock(id, name));
+        cout << "Building Added.\n";
     }
 
-    void ScheduleMakeupLab(LabDetails *lDetails, VenueDetails *vDetails, FacultyDetails *fDetails)
-    {
-        vector<MakeupLabRequest> requests = ReadMakeupRequestsFromBinary(lDetails);
+    void AddRoom(VenueDetails *vDetails) {
+        int id, num, bId;
+        cout << "Enter Room ID: "; InputOutput::SafeReadInt(id);
+        if(vDetails->FindRoom(id)) { cout << "ID exists.\n"; return; }
+        cout << "Enter Room Number: "; InputOutput::SafeReadInt(num);
+        cout << "Enter Building ID: "; InputOutput::SafeReadInt(bId);
         
-        if (requests.empty())
-        {
-            cout << "\nNo makeup lab requests found.\n";
-            return;
-        }
+        CampusBlock* b = vDetails->FindBuilding(bId);
+        if(!b) { cout << "Building ID not found.\n"; return; }
         
-        cout << "\n--- AVAILABLE MAKEUP REQUESTS ---\n";
-        for (size_t i = 0; i < requests.size(); i++)
-        {
-            int labId = (requests[i].lab ? requests[i].lab->labId : -1);
-            string courseCode = (requests[i].lab ? requests[i].lab->courseCode : "N/A");
-            cout << (i + 1) << ". Lab ID: " << labId << " (" << courseCode << ")"
-                 << ", Section: " << requests[i].sectionName 
-                 << ", Date: " << requests[i].requestedDate
-                 << ", Time: " << requests[i].requestedStartTime 
-                 << "-" << requests[i].requestedEndTime << endl;
-        }
-        
-        int choice;
-        cout << "\nSelect request number to schedule (0 to cancel): ";
-        InputOutput::SafeReadInt(choice);
-        
-        if (choice < 1 || choice > (int)requests.size())
-        {
-            cout << "Invalid selection.\n";
-            return;
-        }
-        
-        MakeupLabRequest selected = requests[choice - 1];
-        
-        // Get scheduling details
-        int teacherId, bId, rId, taCount;
-        string day;
-        
-        cout << "Instructor/Teacher ID (1 or 2): ";
-        InputOutput::SafeReadInt(teacherId);
-        cout << "Building ID (1 or 2): ";
-        InputOutput::SafeReadInt(bId);
-        cout << "Room ID (101 or 102): ";
-        InputOutput::SafeReadInt(rId);
-        cout << "Day: ";
-        InputOutput::SafeReadString(day);
-        
-        UniversityTeacher *teach = fDetails->FindTeacher(teacherId);
-        CampusBlock *build = vDetails->FindBuilding(bId);
-        LectureHall *room = vDetails->FindRoom(rId);
-        
-        if (!teach || !build || !room)
-        {
-            cout << "Error: Invalid Teacher, Building, or Room ID.\n";
-            return;
-        }
-
-        // Validate that the room belongs to the specified building
-        if (room->building == nullptr || room->building->buildingId != build->buildingId)
-        {
-            cout << "Error: Room ID " << rId << " does not belong to Building ID " << bId << ".\n";
-            if (room->building)
-            {
-                cout << "Room " << rId << " belongs to Building ID " << room->building->buildingId 
-                     << " (" << room->building->name << ").\n";
-            }
-            return;
-        }
-        
-        // Create new section for makeup lab
-        ClassSection makeupSec;
-        makeupSec.SetDetails(selected.sectionName + "_MAKEUP", teach, build, room);
-        makeupSec.scheduleTime.Set(selected.requestedDate, selected.requestedStartTime, selected.requestedEndTime);
-        
-        cout << "How many TAs? ";
-        InputOutput::SafeReadInt(taCount);
-        for (int i = 0; i < taCount; i++)
-        {
-            int taId;
-            cout << "TA ID (101-103): ";
-            InputOutput::SafeReadInt(taId);
-            TeachingAssistant *ta = fDetails->FindTA(taId);
-            if (ta)
-                makeupSec.AddTA(ta);
-        }
-        
-        // Use the lab pointer directly from the request
-        selected.lab->AddSection(makeupSec);
-        lDetails->UpdateLab(*selected.lab);
-        
-        // Remove the fulfilled request from the list
-        requests.erase(requests.begin() + (choice - 1));
-        
-        // Rewrite the binary file without the fulfilled request
-        WriteMakeupRequestsToBinary(requests);
-        
-        cout << "Makeup lab scheduled successfully and request removed from pending requests.\n";
+        vDetails->AddRoom(LectureHall(id, num, bId, b));
+        cout << "Room Added.\n";
     }
 
-    void ViewCompleteLabDetails(LabDetails *lDetails, VenueDetails *vDetails, FacultyDetails *fDetails)
+    void AddTeacher(FacultyDetails *fDetails) {
+        int id; string name;
+        cout << "Enter Teacher ID: "; InputOutput::SafeReadInt(id);
+        if(fDetails->FindTeacher(id)) { cout << "ID exists.\n"; return; }
+        cout << "Enter Name: "; InputOutput::SafeReadString(name);
+        fDetails->AddTeacher(UniversityTeacher(id, name));
+        cout << "Teacher Added.\n";
+    }
+
+    void AddTA(FacultyDetails *fDetails) {
+        int id; string name;
+        cout << "Enter TA ID: "; InputOutput::SafeReadInt(id);
+        if(fDetails->FindTA(id)) { cout << "ID exists.\n"; return; }
+        cout << "Enter Name: "; InputOutput::SafeReadString(name);
+        fDetails->AddTA(TeachingAssistant(id, name));
+        cout << "TA Added.\n";
+    }
+
+    // --- Core Methods ---
+
+    void ViewCompleteLabDetails(LabDetails *lDetails)
     {
-        cout << "\n--- COMPLETE LAB SCHEDULING INFORMATION ---\n\n";
-        
-        // Display all scheduled labs
-        cout << "=== SCHEDULED LABS ===\n";
+        cout << "\n--- COMPLETE LAB SCHEDULING INFORMATION ---\n";
         vector<CourseLaboratory> &labs = lDetails->GetAllLabs();
-        if (labs.empty())
+        if (labs.empty()) { cout << "No labs scheduled.\n"; return; }
+
+        for (const auto &lab : labs)
         {
-            cout << "No labs scheduled yet.\n";
-        }
-        else
-        {
-            for (const auto &lab : labs)
+            cout << "\nLab ID: " << lab.GetLabId() << " | Code: " << lab.GetCourseCode() << "\n";
+            for (const auto &sec : lab.GetSections())
             {
-                cout << "\nLab ID: " << lab.labId << " | Course Code: " << lab.courseCode << "\n";
-                cout << "  Sections: ";
-                for (size_t i = 0; i < lab.sections.size(); i++)
-                {
-                    cout << lab.sections[i].sectionName;
-                    if (i < lab.sections.size() - 1)
-                        cout << ", ";
-                }
-                cout << "\n";
+                cout << "  Section: " << sec.GetSectionName() << "\n";
+                cout << "  Instructor: " << (sec.GetTeacher() ? sec.GetTeacher()->GetName() : "Unassigned") << "\n";
+                cout << "  Room: " << (sec.GetRoom() ? to_string(sec.GetRoom()->GetRoomNumber()) : "N/A") << "\n";
+                cout << "  Time: " << sec.GetScheduleTime().GetDate() << " " << sec.GetScheduleTime().GetStartTime() << "-" << sec.GetScheduleTime().GetEndTime() << "\n";
             }
         }
-        
-        // Display all available instructors
-        cout << "\n=== AVAILABLE INSTRUCTORS ===\n";
-        // We need to access the faculty details - let's create a method to get all teachers
-        // For now, we'll show the seeded data structure
-        cout << "ID: 1 - Dr. Smith\n";
-        cout << "ID: 2 - Dr. Jones\n";
-        cout << "(Note: Additional instructors can be added to the system)\n";
-        
-        // Display all available TAs
-        cout << "\n=== AVAILABLE TEACHING ASSISTANTS ===\n";
-        cout << "ID: 101 - Alice\n";
-        cout << "ID: 102 - Bob\n";
-        cout << "ID: 103 - Charlie\n";
-        cout << "(Note: Additional TAs can be added to the system)\n";
-        
-        // Display all available venues
-        cout << "\n=== AVAILABLE BUILDINGS ===\n";
-        cout << "ID: 1 - CS Block\n";
-        cout << "ID: 2 - EE Block\n";
-        
-        cout << "\n=== AVAILABLE ROOMS ===\n";
-        cout << "ID: 101 - Room 101\n";
-        cout << "ID: 102 - Room 102\n";
-        
-        // Display detailed section information
-        cout << "\n=== DETAILED SECTION INFORMATION ===\n";
-        if (labs.empty())
-        {
-            cout << "No sections scheduled.\n";
-        }
-        else
-        {
-            for (const auto &lab : labs)
-            {
-                for (const auto &sec : lab.sections)
-                {
-                    cout << "\nLab ID: " << lab.labId << " | Section: " << sec.sectionName << "\n";
-                    cout << "  Course: " << lab.courseCode << "\n";
-                    cout << "  Schedule: " << sec.scheduleTime.date 
-                         << " | " << sec.scheduleTime.startTime 
-                         << " - " << sec.scheduleTime.endTime << "\n";
-                    cout << "  Instructor: " << (sec.teacher ? sec.teacher->name + " (ID: " + to_string(sec.teacher->teacherId) + ")" : "Unassigned") << "\n";
-                    cout << "  Building: " << (sec.building ? sec.building->name + " (ID: " + to_string(sec.building->buildingId) + ")" : "N/A") << "\n";
-                    cout << "  Room: " << (sec.room ? "Room " + to_string(sec.room->roomNumber) + " (ID: " + to_string(sec.room->roomId) + ")" : "N/A") << "\n";
-                    cout << "  TAs: ";
-                    if (sec.assistants.empty())
-                    {
-                        cout << "None assigned\n";
-                    }
-                    else
-                    {
-                        for (size_t i = 0; i < sec.assistants.size(); i++)
-                        {
-                            if (sec.assistants[i])
-                                cout << sec.assistants[i]->name << " (ID: " << sec.assistants[i]->taId << ")";
-                            if (i < sec.assistants.size() - 1)
-                                cout << ", ";
-                        }
-                        cout << "\n";
-                    }
-                }
-            }
-        }
-        cout << "\n========================================\n";
     }
 
     void ScheduleSection(LabDetails *lDetails, VenueDetails *vDetails, FacultyDetails *fDetails)
@@ -1097,125 +773,126 @@ private:
         int labId, teacherId, bId, rId, taCount;
         string code, secName, day, s, e;
 
-        cout << "Lab ID: ";
-        InputOutput::SafeReadInt(labId);
-        cout << "Course Code: ";
-        InputOutput::SafeReadString(code);
-        cout << "Section Name: ";
-        InputOutput::SafeReadString(secName);
-        cout << "Instructor/Teacher ID (1 or 2): ";
-        InputOutput::SafeReadInt(teacherId);
-        cout << "Building ID (1 or 2): ";
-        InputOutput::SafeReadInt(bId);
-        cout << "Room ID (101 or 102): ";
-        InputOutput::SafeReadInt(rId);
-        cout << "Day: ";
-        InputOutput::SafeReadString(day);
-        
-        // Validate start time format
-        do
-        {
-            cout << "Start (HH:MM): ";
-            InputOutput::SafeReadString(s);
-            if (!DataValidator::IsValidTime(s))
-            {
-                cout << "Error: Invalid time format. Please use HH:MM format (e.g., 09:30, 14:00).\n";
-            }
-        } while (!DataValidator::IsValidTime(s));
-        
-        // Validate end time format
-        do
-        {
-            cout << "End (HH:MM): ";
-            InputOutput::SafeReadString(e);
-            if (!DataValidator::IsValidTime(e))
-            {
-                cout << "Error: Invalid time format. Please use HH:MM format (e.g., 09:30, 14:00).\n";
-            }
-        } while (!DataValidator::IsValidTime(e));
-        
-        // Validate start time < end time
-        if (!DataValidator::IsStartBeforeEnd(s, e))
-        {
-            cout << "Error: Start time must be before end time.\n";
-            return;
-        }
+        cout << "Lab ID: "; InputOutput::SafeReadInt(labId);
+        cout << "Course Code: "; InputOutput::SafeReadString(code);
+        cout << "Section Name: "; InputOutput::SafeReadString(secName);
+        cout << "Teacher ID: "; InputOutput::SafeReadInt(teacherId);
+        cout << "Building ID: "; InputOutput::SafeReadInt(bId);
+        cout << "Room ID: "; InputOutput::SafeReadInt(rId);
+        cout << "Day: "; InputOutput::SafeReadString(day);
+        cout << "Start (HH:MM): "; InputOutput::SafeReadString(s);
+        cout << "End (HH:MM): "; InputOutput::SafeReadString(e);
 
-        UniversityTeacher *teach = fDetails->FindTeacher(teacherId);
-        CampusBlock *build = vDetails->FindBuilding(bId);
-        LectureHall *room = vDetails->FindRoom(rId);
+        UniversityTeacher *t = fDetails->FindTeacher(teacherId);
+        CampusBlock *b = vDetails->FindBuilding(bId);
+        LectureHall *r = vDetails->FindRoom(rId);
 
-        if (!teach || !build || !room)
-        {
-            cout << "Error: Invalid Teacher, Building, or Room ID.\n";
-            return;
-        }
+        if (!t || !b || !r) { cout << "Invalid Teacher/Building/Room ID.\n"; return; }
+        if (r->GetBuildingId() != bId) { cout << "Room not in Building.\n"; return; }
 
-        // Validate that the room belongs to the specified building
-        if (room->building == nullptr || room->building->buildingId != build->buildingId)
-        {
-            cout << "Error: Room ID " << rId << " does not belong to Building ID " << bId << ".\n";
-            if (room->building)
-            {
-                cout << "Room " << rId << " belongs to Building ID " << room->building->buildingId 
-                     << " (" << room->building->name << ").\n";
-            }
-            return;
-        }
+        ClassSection sec;
+        sec.SetDetails(secName, t, b, r);
+        sec.GetScheduleTime().Set(day, s, e);
 
-        ClassSection newSec;
-        newSec.SetDetails(secName, teach, build, room);
-        newSec.scheduleTime.Set(day, s, e);
-
-        cout << "How many TAs? ";
-        InputOutput::SafeReadInt(taCount);
-        for (int i = 0; i < taCount; i++)
-        {
-            int taId;
-            cout << "TA ID (101-103): ";
-            InputOutput::SafeReadInt(taId);
-            TeachingAssistant *ta = fDetails->FindTA(taId);
-            if (ta)
-                newSec.AddTA(ta);
+        cout << "Num TAs: "; InputOutput::SafeReadInt(taCount);
+        for(int i=0; i<taCount; i++) {
+            int taId; cout << "TA ID: "; InputOutput::SafeReadInt(taId);
+            TeachingAssistant* ta = fDetails->FindTA(taId);
+            if(ta) sec.AddTA(ta);
         }
 
         CourseLaboratory *lab = lDetails->FindLab(labId);
-        if (lab)
-        {
-            lab->AddSection(newSec);
+        if (lab) {
+            lab->AddSection(sec);
             lDetails->UpdateLab(*lab);
-        }
-        else
-        {
+        } else {
             CourseLaboratory newLab;
-            newLab.labId = labId;
-            newLab.courseCode = code;
-            newLab.AddSection(newSec);
+            newLab.SetLabId(labId);
+            newLab.SetCourseCode(code);
+            newLab.AddSection(sec);
             lDetails->AddLab(newLab);
         }
-        cout << "Section Scheduled.\n";
+        cout << "Scheduled.\n";
     }
 
-public:
-    AcademicOfficer() : Person("Academic Officer") {}
-
-    void ShowMenu(LabDetails *lDetails, VenueDetails *vDetails, FacultyDetails *fDetails)
+    void ViewMakeupRequests(LabDetails *lDetails)
     {
-        int choice;
-        while (true)
+        vector<MakeupLabRequest> requests = ReadMakeupRequestsFromBinary(lDetails);
+        if (requests.empty()) { cout << "\nNo makeup requests.\n"; return; }
+
+        cout << "\n--- MAKEUP REQUESTS ---\n";
+        for (const auto &req : requests)
         {
-            cout << "\n--- ACADEMIC OFFICER ---\n1. View Complete Lab Details\n2. Schedule Section\n3. View Makeup Requests\n4. Schedule Makeup Lab\n5. Logout\nSelect: ";
-            InputOutput::SafeReadInt(choice);
-            if (choice == 1)
-                ViewCompleteLabDetails(lDetails, vDetails, fDetails);
-            else if (choice == 2)
-                ScheduleSection(lDetails, vDetails, fDetails);
-            else if (choice == 3)
-                ViewMakeupRequests(lDetails);
-            else if (choice == 4)
-                ScheduleMakeupLab(lDetails, vDetails, fDetails);
-            else
-                return;
+            int labId = (req.GetLab() ? req.GetLab()->GetLabId() : -1);
+            cout << "Lab: " << labId << " | Sec: " << req.GetSectionName() << " | Date: " << req.GetRequestedDate() << "\n";
+        }
+    }
+
+    void ScheduleMakeupLab(LabDetails *lDetails, VenueDetails *vDetails, FacultyDetails *fDetails)
+    {
+        vector<MakeupLabRequest> requests = ReadMakeupRequestsFromBinary(lDetails);
+        if (requests.empty()) { cout << "\nNo makeup requests.\n"; return; }
+
+        cout << "\n--- AVAILABLE MAKEUP REQUESTS ---\n";
+        for (size_t i = 0; i < requests.size(); i++)
+        {
+            int labId = (requests[i].GetLab() ? requests[i].GetLab()->GetLabId() : -1);
+            cout << (i + 1) << ". Lab ID: " << labId << ", Sec: " << requests[i].GetSectionName() << endl;
+        }
+
+        int choice; cout << "\nSelect request number (0 to cancel): "; InputOutput::SafeReadInt(choice);
+        if (choice < 1 || choice > (int)requests.size()) return;
+
+        MakeupLabRequest selected = requests[choice - 1];
+
+        int teacherId, bId, rId, taCount;
+        cout << "Instructor ID: "; InputOutput::SafeReadInt(teacherId);
+        cout << "Building ID: "; InputOutput::SafeReadInt(bId);
+        cout << "Room ID: "; InputOutput::SafeReadInt(rId);
+
+        UniversityTeacher *t = fDetails->FindTeacher(teacherId);
+        CampusBlock *b = vDetails->FindBuilding(bId);
+        LectureHall *r = vDetails->FindRoom(rId);
+
+        if (!t || !b || !r) { cout << "Invalid IDs.\n"; return; }
+
+        ClassSection makeupSec;
+        makeupSec.SetDetails(selected.GetSectionName() + "_MAKEUP", t, b, r);
+        makeupSec.GetScheduleTime().Set(selected.GetRequestedDate(), selected.GetRequestedStartTime(), selected.GetRequestedEndTime());
+
+        cout << "Num TAs: "; InputOutput::SafeReadInt(taCount);
+        for(int i=0; i<taCount; i++) {
+            int taId; cout << "TA ID: "; InputOutput::SafeReadInt(taId);
+            TeachingAssistant* ta = fDetails->FindTA(taId);
+            if(ta) makeupSec.AddTA(ta);
+        }
+
+        selected.GetLab()->AddSection(makeupSec);
+        lDetails->UpdateLab(*selected.GetLab());
+
+        requests.erase(requests.begin() + (choice - 1));
+        WriteMakeupRequestsToBinary(requests);
+        cout << "Makeup Scheduled.\n";
+    }
+
+    void ShowMenu(LabDetails *l, VenueDetails *v, FacultyDetails *f) {
+        while(true) {
+            cout << "\n--- ACADEMIC OFFICER ---\n";
+            cout << "1. Add Infrastructure (Building/Room/Faculty)\n2. Schedule Section\n3. View Details\n4. View Makeup Requests\n5. Schedule Makeup\n6. Logout\nSelect: ";
+            int ch; InputOutput::SafeReadInt(ch);
+            if(ch==1) {
+                cout << "1. Building, 2. Room, 3. Teacher, 4. TA: ";
+                int sub; InputOutput::SafeReadInt(sub);
+                if(sub==1) AddBuilding(v);
+                else if(sub==2) AddRoom(v);
+                else if(sub==3) AddTeacher(f);
+                else if(sub==4) AddTA(f);
+            }
+            else if(ch==2) ScheduleSection(l, v, f);
+            else if(ch==3) ViewCompleteLabDetails(l);
+            else if(ch==4) ViewMakeupRequests(l);
+            else if(ch==5) ScheduleMakeupLab(l, v, f);
+            else return;
         }
     }
 };
@@ -1228,111 +905,52 @@ private:
         ofstream out("makeup_requests.dat", ios::binary | ios::app);
         if (out.is_open())
         {
-            // Write labId (from the pointer)
-            int labId = (request.lab ? request.lab->labId : -1);
+            int labId = (request.GetLab() ? request.GetLab()->GetLabId() : -1);
             out.write(reinterpret_cast<const char *>(&labId), sizeof(int));
-            
-            // Write sectionName length and string
-            int secLen = request.sectionName.length();
-            out.write(reinterpret_cast<const char *>(&secLen), sizeof(int));
-            out.write(request.sectionName.c_str(), secLen);
-            
-            // Write requestedDate length and string
-            int dateLen = request.requestedDate.length();
-            out.write(reinterpret_cast<const char *>(&dateLen), sizeof(int));
-            out.write(request.requestedDate.c_str(), dateLen);
-            
-            // Write requestedStartTime length and string
-            int startLen = request.requestedStartTime.length();
-            out.write(reinterpret_cast<const char *>(&startLen), sizeof(int));
-            out.write(request.requestedStartTime.c_str(), startLen);
-            
-            // Write requestedEndTime length and string
-            int endLen = request.requestedEndTime.length();
-            out.write(reinterpret_cast<const char *>(&endLen), sizeof(int));
-            out.write(request.requestedEndTime.c_str(), endLen);
-            
+            string secName = request.GetSectionName(); int secLen = secName.length();
+            out.write(reinterpret_cast<const char *>(&secLen), sizeof(int)); out.write(secName.c_str(), secLen);
+            string date = request.GetRequestedDate(); int dateLen = date.length();
+            out.write(reinterpret_cast<const char *>(&dateLen), sizeof(int)); out.write(date.c_str(), dateLen);
+            string start = request.GetRequestedStartTime(); int startLen = start.length();
+            out.write(reinterpret_cast<const char *>(&startLen), sizeof(int)); out.write(start.c_str(), startLen);
+            string end = request.GetRequestedEndTime(); int endLen = end.length();
+            out.write(reinterpret_cast<const char *>(&endLen), sizeof(int)); out.write(end.c_str(), endLen);
             out.close();
         }
     }
 
     void RequestMakeupLab(LabDetails *lDetails, int labId, const string &secName, const string &date, const string &s, const string &e)
     {
-        // Check if the lab and section are scheduled
         CourseLaboratory *l = lDetails->FindLab(labId);
-        if (!l)
-        {
-            cout << "Error: Lab ID " << labId << " not found. Makeup requests can only be made for scheduled labs.\n";
-            return;
-        }
-        
+        if (!l) { cout << "Error: Lab not found.\n"; return; }
         ClassSection *sec = l->FindSection(secName);
-        if (!sec)
-        {
-            cout << "Error: Section " << secName << " not found for Lab ID " << labId << ". Makeup requests can only be made for scheduled sections.\n";
-            return;
-        }
+        if (!sec) { cout << "Error: Section not found.\n"; return; }
 
-        // Create and save makeup request to binary file
         MakeupLabRequest request(l, secName, date, s, e);
         SaveMakeupRequestToBinary(request);
-        cout << "Makeup Lab Request submitted successfully.\n";
+        cout << "Request Submitted.\n";
     }
 
 public:
     Instructor() : Person("Instructor") {}
-
     void ShowMenu(LabDetails *lDetails)
     {
         int choice;
         while (true)
         {
-            cout << "\n--- INSTRUCTOR DASHBOARD ---\n1. Request Makeup\n2. Logout\nSelect: ";
+            cout << "\n--- INSTRUCTOR ---\n1. Request Makeup\n2. Logout\nSelect: ";
             InputOutput::SafeReadInt(choice);
             if (choice == 1)
             {
-                int id;
-                string sec, date, s, e;
-                cout << "Lab ID: ";
-                InputOutput::SafeReadInt(id);
-                cout << "Section: ";
-                InputOutput::SafeReadString(sec);
-                cout << "Requested Date: ";
-                InputOutput::SafeReadString(date);
-                
-                // Validate start time format
-                do
-                {
-                    cout << "Requested Start Time (HH:MM): ";
-                    InputOutput::SafeReadString(s);
-                    if (!DataValidator::IsValidTime(s))
-                    {
-                        cout << "Error: Invalid time format. Please use HH:MM format (e.g., 09:30, 14:00).\n";
-                    }
-                } while (!DataValidator::IsValidTime(s));
-                
-                // Validate end time format
-                do
-                {
-                    cout << "Requested End Time (HH:MM): ";
-                    InputOutput::SafeReadString(e);
-                    if (!DataValidator::IsValidTime(e))
-                    {
-                        cout << "Error: Invalid time format. Please use HH:MM format (e.g., 09:30, 14:00).\n";
-                    }
-                } while (!DataValidator::IsValidTime(e));
-                
-                // Validate start time < end time
-                if (!DataValidator::IsStartBeforeEnd(s, e))
-                {
-                    cout << "Error: Start time must be before end time.\n";
-                    continue; // Go back to menu
-                }
-                
+                int id; string sec, date, s, e;
+                cout << "Lab ID: "; InputOutput::SafeReadInt(id);
+                cout << "Section: "; InputOutput::SafeReadString(sec);
+                cout << "Date: "; InputOutput::SafeReadString(date);
+                cout << "Start: "; InputOutput::SafeReadString(s);
+                cout << "End: "; InputOutput::SafeReadString(e);
                 RequestMakeupLab(lDetails, id, sec, date, s, e);
             }
-            else
-                return;
+            else return;
         }
     }
 };
@@ -1343,140 +961,69 @@ private:
     bool IsLabSectionScheduled(LabDetails *lDetails, int labId, const string &secName)
     {
         CourseLaboratory *lab = lDetails->FindLab(labId);
-        if (!lab)
-            return false;
+        if (!lab) return false;
         ClassSection *sec = lab->FindSection(secName);
         return sec != nullptr;
     }
 
     void ViewScheduledLabs(LabDetails *lDetails)
     {
-        cout << "\n--- SCHEDULED LABS DETAILS ---\n";
+        cout << "\n--- SCHEDULED LABS ---\n";
         vector<CourseLaboratory> &labs = lDetails->GetAllLabs();
-        
-        if (labs.empty())
-        {
-            cout << "No labs have been scheduled yet.\n";
-            return;
-        }
+        if (labs.empty()) { cout << "No labs scheduled.\n"; return; }
 
         for (const auto &lab : labs)
         {
-            cout << "\n========================================\n";
-            cout << "COURSE: " << lab.courseCode << " (Lab ID: " << lab.labId << ")\n";
-            cout << "========================================\n";
-            
-            for (const auto &sec : lab.sections)
+            cout << "\nCourse: " << lab.GetCourseCode() << " (ID: " << lab.GetLabId() << ")\n";
+            for (const auto &sec : lab.GetSections())
             {
-                cout << "\n  Section: " << sec.sectionName << "\n";
-                cout << "  Schedule: " << sec.scheduleTime.date 
-                     << " | " << sec.scheduleTime.startTime 
-                     << " - " << sec.scheduleTime.endTime << "\n";
-                cout << "  Venue: " << (sec.building ? sec.building->name : "N/A")
-                     << " - Room " << (sec.room ? to_string(sec.room->roomNumber) : "N/A") << "\n";
-                cout << "  Instructor: " << (sec.teacher ? sec.teacher->name : "Unassigned") << "\n";
-                cout << "  Teaching Assistants: ";
-                if (sec.assistants.empty())
-                {
-                    cout << "None assigned\n";
-                }
-                else
-                {
-                    for (size_t i = 0; i < sec.assistants.size(); i++)
-                    {
-                        cout << (sec.assistants[i] ? sec.assistants[i]->name : "Unknown");
-                        if (i < sec.assistants.size() - 1)
-                            cout << ", ";
-                    }
-                    cout << "\n";
-                }
+                cout << "  Sec: " << sec.GetSectionName() << " | Time: " << sec.GetScheduleTime().GetDate() << " " << sec.GetScheduleTime().GetStartTime() << "-" << sec.GetScheduleTime().GetEndTime() << "\n";
             }
         }
-        cout << "\n========================================\n";
     }
 
     void FillTimeSheet(LabDetails *lDetails, WorkLogDetails *logDetails, int labId, const string &secName, const string &d, const string &s, const string &e, bool leave)
     {
-        // Check if the lab and section are scheduled
-        if (!IsLabSectionScheduled(lDetails, labId, secName))
-        {
-            cout << "Error: This lab ID and section combination has not been scheduled by Academic Officer.\n";
-            return;
-        }
-
+        if (!IsLabSectionScheduled(lDetails, labId, secName)) { cout << "Error: Not scheduled.\n"; return; }
         WorkLog entry;
-        entry.labId = labId;
-        entry.sectionName = secName;
-        entry.actualTiming.Set(d, s, e);
-        entry.isLeave = leave;
+        entry.SetLabId(labId); entry.SetSectionName(secName);
+        entry.GetActualTiming().Set(d, s, e); entry.SetIsLeave(leave);
         logDetails->AddEntry(entry);
         cout << "Time Sheet Filled.\n";
     }
 
 public:
     Attendant() : Person("Attendant") {}
-
     void ShowMenu(LabDetails *lDetails, WorkLogDetails *logDetails)
     {
         int choice;
         while (true)
         {
-            cout << "\n--- ATTENDANT DASHBOARD ---\n1. View Scheduled Labs\n2. Fill Time Sheet\n3. Logout\nSelect: ";
+            cout << "\n--- ATTENDANT ---\n1. View Labs\n2. Fill Time Sheet\n3. Logout\nSelect: ";
             InputOutput::SafeReadInt(choice);
-            if (choice == 1)
-                ViewScheduledLabs(lDetails);
+            if (choice == 1) ViewScheduledLabs(lDetails);
             else if (choice == 2)
             {
-                int id, leave;
-                string sec, d, s, e;
-                cout << "Lab ID: ";
-                InputOutput::SafeReadInt(id);
-                cout << "Section: ";
-                InputOutput::SafeReadString(sec);
-                cout << "Date: ";
-                InputOutput::SafeReadString(d);
-                cout << "Leave? (1/0): ";
-                InputOutput::SafeReadInt(leave);
-                if (!leave)
-                {
-                    // Validate start time format
-                    do
-                    {
-                        cout << "Start (HH:MM): ";
-                        InputOutput::SafeReadString(s);
-                        if (!DataValidator::IsValidTime(s))
-                        {
-                            cout << "Error: Invalid time format. Please use HH:MM format (e.g., 09:30, 14:00).\n";
-                        }
-                    } while (!DataValidator::IsValidTime(s));
-                    
-                    // Validate end time format
-                    do
-                    {
-                        cout << "End (HH:MM): ";
-                        InputOutput::SafeReadString(e);
-                        if (!DataValidator::IsValidTime(e))
-                        {
-                            cout << "Error: Invalid time format. Please use HH:MM format (e.g., 09:30, 14:00).\n";
-                        }
-                    } while (!DataValidator::IsValidTime(e));
-                    
-                    // Validate start time < end time
-                    if (!DataValidator::IsStartBeforeEnd(s, e))
-                    {
-                        cout << "Error: Start time must be before end time.\n";
-                        continue; // Go back to menu
-                    }
+                int id, leave; string sec, d, s, e;
+                cout << "Lab ID: "; InputOutput::SafeReadInt(id);
+                cout << "Section: "; InputOutput::SafeReadString(sec);
+                cout << "Date: "; InputOutput::SafeReadString(d);
+                cout << "Leave? (1/0): "; InputOutput::SafeReadInt(leave);
+                if (!leave) {
+                    cout << "Start: "; InputOutput::SafeReadString(s);
+                    cout << "End: "; InputOutput::SafeReadString(e);
                 }
                 FillTimeSheet(lDetails, logDetails, id, sec, d, s, e, leave);
             }
-            else
-                return;
+            else return;
         }
     }
 };
 
-// STORAGE MANAGER (Serialization)
+
+// ==========================================
+// STORAGE MANAGER (The Key Dynamic Part)
+// ==========================================
 
 class StorageManager
 {
@@ -1485,26 +1032,18 @@ class StorageManager
     FacultyDetails *facultyDetails;
     WorkLogDetails *logDetails;
 
-private:
-    // Helper function to write string to binary file
     void WriteString(ofstream &out, const string &str)
     {
         int len = str.length();
         out.write(reinterpret_cast<const char *>(&len), sizeof(int));
-        if (len > 0)
-        {
-            out.write(str.c_str(), len);
-        }
+        if (len > 0) out.write(str.c_str(), len);
     }
 
-    // Helper function to read string from binary file
     string ReadString(ifstream &in)
     {
         int len;
         in.read(reinterpret_cast<char *>(&len), sizeof(int));
-        if (len <= 0 || in.eof())
-            return "";
-        
+        if (len <= 0 || in.eof()) return "";
         char *buf = new char[len + 1];
         in.read(buf, len);
         buf[len] = '\0';
@@ -1519,222 +1058,234 @@ public:
 
     void Save()
     {
-        ofstream out("labs_data.dat", ios::binary);
-        if (!out.is_open())
-        {
-            cout << "[System] Error: Could not open labs_data.dat for writing.\n";
-            return;
+        // 1. Save Venue Data
+        ofstream vOut("venue.dat", ios::binary);
+        if (vOut.is_open()) {
+            auto& bldgs = venueDetails->GetAllBuildings();
+            int bCount = bldgs.size();
+            vOut.write(reinterpret_cast<const char*>(&bCount), sizeof(int));
+            for(auto& b : bldgs) {
+                int id = b.GetId();
+                vOut.write(reinterpret_cast<const char*>(&id), sizeof(int));
+                WriteString(vOut, b.GetName());
+            }
+
+            auto& rooms = venueDetails->GetAllRooms();
+            int rCount = rooms.size();
+            vOut.write(reinterpret_cast<const char*>(&rCount), sizeof(int));
+            for(auto& r : rooms) {
+                int id = r.GetId();
+                int num = r.GetRoomNumber();
+                int bId = r.GetBuildingId(); // Store ID, not pointer
+                vOut.write(reinterpret_cast<const char*>(&id), sizeof(int));
+                vOut.write(reinterpret_cast<const char*>(&num), sizeof(int));
+                vOut.write(reinterpret_cast<const char*>(&bId), sizeof(int));
+            }
+            vOut.close();
         }
 
-        vector<CourseLaboratory> &labs = labDetails->GetAllLabs();
-        
-        // Write number of labs
-        int labCount = labs.size();
-        out.write(reinterpret_cast<const char *>(&labCount), sizeof(int));
+        // 2. Save Faculty Data
+        ofstream fOut("faculty.dat", ios::binary);
+        if(fOut.is_open()) {
+            auto& teachers = facultyDetails->GetAllTeachers();
+            int tCount = teachers.size();
+            fOut.write(reinterpret_cast<const char*>(&tCount), sizeof(int));
+            for(auto& t : teachers) {
+                int id = t.GetId();
+                fOut.write(reinterpret_cast<const char*>(&id), sizeof(int));
+                WriteString(fOut, t.GetName());
+            }
 
-        for (const auto &lab : labs)
-        {
-            // Write lab ID
-            out.write(reinterpret_cast<const char *>(&lab.labId), sizeof(int));
-            
-            // Write course code
-            WriteString(out, lab.courseCode);
-            
-            // Write number of sections
-            int secCount = lab.sections.size();
-            out.write(reinterpret_cast<const char *>(&secCount), sizeof(int));
+            auto& tas = facultyDetails->GetAllTAs();
+            int taCount = tas.size();
+            fOut.write(reinterpret_cast<const char*>(&taCount), sizeof(int));
+            for(auto& t : tas) {
+                int id = t.GetId();
+                fOut.write(reinterpret_cast<const char*>(&id), sizeof(int));
+                WriteString(fOut, t.GetName());
+            }
+            fOut.close();
+        }
 
-            for (const auto &sec : lab.sections)
-            {
-                // Write section name
-                WriteString(out, sec.sectionName);
-                
-                // Write teacher ID
-                int teachId = (sec.teacher ? sec.teacher->teacherId : -1);
-                out.write(reinterpret_cast<const char *>(&teachId), sizeof(int));
-                
-                // Write building ID
-                int buildId = (sec.building ? sec.building->buildingId : -1);
-                out.write(reinterpret_cast<const char *>(&buildId), sizeof(int));
-                
-                // Write room ID
-                int roomId = (sec.room ? sec.room->roomId : -1);
-                out.write(reinterpret_cast<const char *>(&roomId), sizeof(int));
-                
-                // Write schedule time
-                WriteString(out, sec.scheduleTime.date);
-                WriteString(out, sec.scheduleTime.startTime);
-                WriteString(out, sec.scheduleTime.endTime);
+        // 3. Save Schedule (Labs)
+        ofstream sOut("schedule.dat", ios::binary);
+        if(sOut.is_open()) {
+            auto& labs = labDetails->GetAllLabs();
+            int lCount = labs.size();
+            sOut.write(reinterpret_cast<const char*>(&lCount), sizeof(int));
+            for(auto& lab : labs) {
+                int id = lab.GetLabId();
+                sOut.write(reinterpret_cast<const char*>(&id), sizeof(int));
+                WriteString(sOut, lab.GetCourseCode());
 
-                // Write number of TAs
-                int taCount = sec.assistants.size();
-                out.write(reinterpret_cast<const char *>(&taCount), sizeof(int));
-                
-                // Write TA IDs
-                for (auto ta : sec.assistants)
-                {
-                    int taId = (ta ? ta->taId : -1);
-                    out.write(reinterpret_cast<const char *>(&taId), sizeof(int));
+                auto& secs = lab.GetSections();
+                int sCount = secs.size();
+                sOut.write(reinterpret_cast<const char*>(&sCount), sizeof(int));
+                for(auto& sec : secs) {
+                    WriteString(sOut, sec.GetSectionName());
+                    
+                    // Store IDs for relationships
+                    int tId = (sec.GetTeacher() ? sec.GetTeacher()->GetId() : -1);
+                    int bId = (sec.GetBuilding() ? sec.GetBuilding()->GetId() : -1);
+                    int rId = (sec.GetRoom() ? sec.GetRoom()->GetId() : -1);
+                    
+                    sOut.write(reinterpret_cast<const char*>(&tId), sizeof(int));
+                    sOut.write(reinterpret_cast<const char*>(&bId), sizeof(int));
+                    sOut.write(reinterpret_cast<const char*>(&rId), sizeof(int));
+
+                    WriteString(sOut, sec.GetScheduleTime().GetDate());
+                    WriteString(sOut, sec.GetScheduleTime().GetStartTime());
+                    WriteString(sOut, sec.GetScheduleTime().GetEndTime());
+
+                    auto& tas = sec.GetAssistants();
+                    int taCount = tas.size();
+                    sOut.write(reinterpret_cast<const char*>(&taCount), sizeof(int));
+                    for(auto* ta : tas) {
+                        int taId = ta ? ta->GetId() : -1;
+                        sOut.write(reinterpret_cast<const char*>(&taId), sizeof(int));
+                    }
                 }
             }
+            sOut.close();
         }
-        out.close();
-
-        // Save Work Logs
-        ofstream wout("logs_data.dat", ios::binary);
-        if (!wout.is_open())
-        {
-            cout << "[System] Error: Could not open logs_data.dat for writing.\n";
-            return;
-        }
-
-        vector<WorkLog> &logs = logDetails->GetAllEntries();
         
-        // Write number of logs
-        int logCount = logs.size();
-        wout.write(reinterpret_cast<const char *>(&logCount), sizeof(int));
-        
-        for (const auto &log : logs)
-        {
-            // Write lab ID
-            wout.write(reinterpret_cast<const char *>(&log.labId), sizeof(int));
-            
-            // Write section name
-            WriteString(wout, log.sectionName);
-            
-            // Write isLeave flag
-            wout.write(reinterpret_cast<const char *>(&log.isLeave), sizeof(bool));
-            
-            // Write timing information
-            WriteString(wout, log.actualTiming.date);
-            WriteString(wout, log.actualTiming.startTime);
-            WriteString(wout, log.actualTiming.endTime);
+        // 4. Save Logs (New addition to ensure consistency)
+        ofstream lOut("logs.dat", ios::binary);
+        if(lOut.is_open()) {
+             auto& logs = logDetails->GetAllEntries();
+             int logCount = logs.size();
+             lOut.write(reinterpret_cast<const char*>(&logCount), sizeof(int));
+             for(auto& log : logs) {
+                 int id = log.GetLabId();
+                 lOut.write(reinterpret_cast<const char*>(&id), sizeof(int));
+                 WriteString(lOut, log.GetSectionName());
+                 bool leave = log.GetIsLeave();
+                 lOut.write(reinterpret_cast<const char*>(&leave), sizeof(bool));
+                 WriteString(lOut, log.GetActualTiming().GetDate());
+                 WriteString(lOut, log.GetActualTiming().GetStartTime());
+                 WriteString(lOut, log.GetActualTiming().GetEndTime());
+             }
+             lOut.close();
         }
-        wout.close();
-
-        cout << "[System] Data saved to binary files.\n";
+        
+        cout << "Data Saved Successfully.\n";
     }
 
     void Load()
     {
-        ifstream in("labs_data.dat", ios::binary);
-        if (in.is_open())
-        {
-            int labCount;
-            in.read(reinterpret_cast<char *>(&labCount), sizeof(int));
-            
-            for (int i = 0; i < labCount && !in.eof(); i++)
-            {
+        // 1. Load Venue Data (Buildings FIRST, then Rooms)
+        ifstream vIn("venue.dat", ios::binary);
+        if(vIn.is_open()) {
+            int bCount; vIn.read(reinterpret_cast<char*>(&bCount), sizeof(int));
+            for(int i=0; i<bCount && !vIn.eof(); i++) {
+                int id; vIn.read(reinterpret_cast<char*>(&id), sizeof(int));
+                string name = ReadString(vIn);
+                venueDetails->AddBuilding(CampusBlock(id, name));
+            }
+
+            int rCount; vIn.read(reinterpret_cast<char*>(&rCount), sizeof(int));
+            for(int i=0; i<rCount && !vIn.eof(); i++) {
+                int id, num, bId;
+                vIn.read(reinterpret_cast<char*>(&id), sizeof(int));
+                vIn.read(reinterpret_cast<char*>(&num), sizeof(int));
+                vIn.read(reinterpret_cast<char*>(&bId), sizeof(int));
+                
+                // Re-link pointer
+                CampusBlock* b = venueDetails->FindBuilding(bId);
+                venueDetails->AddRoom(LectureHall(id, num, bId, b));
+            }
+            vIn.close();
+        }
+
+        // 2. Load Faculty Data
+        ifstream fIn("faculty.dat", ios::binary);
+        if(fIn.is_open()) {
+            int tCount; fIn.read(reinterpret_cast<char*>(&tCount), sizeof(int));
+            for(int i=0; i<tCount && !fIn.eof(); i++) {
+                int id; fIn.read(reinterpret_cast<char*>(&id), sizeof(int));
+                string name = ReadString(fIn);
+                facultyDetails->AddTeacher(UniversityTeacher(id, name));
+            }
+            int taCount; fIn.read(reinterpret_cast<char*>(&taCount), sizeof(int));
+            for(int i=0; i<taCount && !fIn.eof(); i++) {
+                int id; fIn.read(reinterpret_cast<char*>(&id), sizeof(int));
+                string name = ReadString(fIn);
+                facultyDetails->AddTA(TeachingAssistant(id, name));
+            }
+            fIn.close();
+        }
+
+        // 3. Load Schedule (Dependent on Venue/Faculty)
+        ifstream sIn("schedule.dat", ios::binary);
+        if(sIn.is_open()) {
+            int lCount; sIn.read(reinterpret_cast<char*>(&lCount), sizeof(int));
+            for(int i=0; i<lCount && !sIn.eof(); i++) {
                 CourseLaboratory lab;
-                int secCount;
-                
-                // Read lab ID
-                in.read(reinterpret_cast<char *>(&lab.labId), sizeof(int));
-                if (in.eof())
-                    break;
-                
-                // Read course code
-                lab.courseCode = ReadString(in);
-                if (in.eof())
-                    break;
-                
-                // Read number of sections
-                in.read(reinterpret_cast<char *>(&secCount), sizeof(int));
-                if (in.eof())
-                    break;
+                int id; sIn.read(reinterpret_cast<char*>(&id), sizeof(int));
+                lab.SetLabId(id);
+                lab.SetCourseCode(ReadString(sIn));
 
-                for (int j = 0; j < secCount && !in.eof(); j++)
-                {
+                int sCount; sIn.read(reinterpret_cast<char*>(&sCount), sizeof(int));
+                for(int j=0; j<sCount; j++) {
                     ClassSection sec;
-                    int teachId, buildId, roomId, taCount;
-
-                    // Read section name
-                    sec.sectionName = ReadString(in);
-                    if (in.eof())
-                        break;
+                    sec.SetSectionName(ReadString(sIn));
                     
-                    // Read teacher, building, room IDs
-                    in.read(reinterpret_cast<char *>(&teachId), sizeof(int));
-                    in.read(reinterpret_cast<char *>(&buildId), sizeof(int));
-                    in.read(reinterpret_cast<char *>(&roomId), sizeof(int));
-                    if (in.eof())
-                        break;
-                    
-                    // Read schedule time
-                    sec.scheduleTime.date = ReadString(in);
-                    sec.scheduleTime.startTime = ReadString(in);
-                    sec.scheduleTime.endTime = ReadString(in);
-                    if (in.eof())
-                        break;
+                    int tId, bId, rId;
+                    sIn.read(reinterpret_cast<char*>(&tId), sizeof(int));
+                    sIn.read(reinterpret_cast<char*>(&bId), sizeof(int));
+                    sIn.read(reinterpret_cast<char*>(&rId), sizeof(int));
 
-                    // Set pointers
-                    sec.teacher = facultyDetails->FindTeacher(teachId);
-                    sec.building = venueDetails->FindBuilding(buildId);
-                    sec.room = venueDetails->FindRoom(roomId);
+                    // Re-link pointers using IDs
+                    sec.SetTeacher(facultyDetails->FindTeacher(tId));
+                    sec.SetBuilding(venueDetails->FindBuilding(bId));
+                    sec.SetRoom(venueDetails->FindRoom(rId));
 
-                    // Read number of TAs
-                    in.read(reinterpret_cast<char *>(&taCount), sizeof(int));
-                    if (in.eof())
-                        break;
-                    
-                    // Read TA IDs
-                    for (int k = 0; k < taCount && !in.eof(); k++)
-                    {
-                        int taId;
-                        in.read(reinterpret_cast<char *>(&taId), sizeof(int));
-                        if (in.eof())
-                            break;
-                        TeachingAssistant *ta = facultyDetails->FindTA(taId);
-                        if (ta)
-                            sec.AddTA(ta);
+                    string d = ReadString(sIn);
+                    string s = ReadString(sIn);
+                    string e = ReadString(sIn);
+                    sec.GetScheduleTime().Set(d,s,e);
+
+                    int taCount; sIn.read(reinterpret_cast<char*>(&taCount), sizeof(int));
+                    for(int k=0; k<taCount; k++) {
+                        int taId; sIn.read(reinterpret_cast<char*>(&taId), sizeof(int));
+                        TeachingAssistant* ta = facultyDetails->FindTA(taId);
+                        if(ta) sec.AddTA(ta);
                     }
                     lab.AddSection(sec);
                 }
                 labDetails->AddLab(lab);
             }
-            in.close();
+            sIn.close();
         }
-
-        ifstream win("logs_data.dat", ios::binary);
-        if (win.is_open())
-        {
-            int logCount;
-            win.read(reinterpret_cast<char *>(&logCount), sizeof(int));
-            
-            for (int i = 0; i < logCount && !win.eof(); i++)
-            {
+        
+        // 4. Load Logs
+        ifstream lIn("logs.dat", ios::binary);
+        if(lIn.is_open()) {
+            int count; lIn.read(reinterpret_cast<char*>(&count), sizeof(int));
+            for(int i=0; i<count && !lIn.eof(); i++) {
                 WorkLog log;
+                int id; lIn.read(reinterpret_cast<char*>(&id), sizeof(int));
+                log.SetLabId(id);
+                log.SetSectionName(ReadString(lIn));
+                bool leave; lIn.read(reinterpret_cast<char*>(&leave), sizeof(bool));
+                log.SetIsLeave(leave);
                 
-                // Read lab ID
-                win.read(reinterpret_cast<char *>(&log.labId), sizeof(int));
-                if (win.eof())
-                    break;
-                
-                // Read section name
-                log.sectionName = ReadString(win);
-                if (win.eof())
-                    break;
-                
-                // Read isLeave flag
-                win.read(reinterpret_cast<char *>(&log.isLeave), sizeof(bool));
-                if (win.eof())
-                    break;
-                
-                // Read timing information
-                log.actualTiming.date = ReadString(win);
-                log.actualTiming.startTime = ReadString(win);
-                log.actualTiming.endTime = ReadString(win);
-                if (win.eof())
-                    break;
-                
+                string d = ReadString(lIn);
+                string s = ReadString(lIn);
+                string e = ReadString(lIn);
+                log.GetActualTiming().Set(d,s,e);
                 logDetails->AddEntry(log);
             }
-            win.close();
+            lIn.close();
         }
+        
+        cout << "Data Loaded.\n";
     }
 };
 
-// MAIN PROGRAM
+// ==========================================
+// MAIN
+// ==========================================
 
 int main()
 {
@@ -1743,9 +1294,7 @@ int main()
     InMemoryFacultyDetails facultyDetails;
     InMemoryWorkLogDetails logDetails;
 
-    venueDetails.SeedData();
-    facultyDetails.SeedData();
-
+    // NO SEED DATA - Everything loads from file or created via menu
     StorageManager storage(&labDetails, &venueDetails, &facultyDetails, &logDetails);
     storage.Load();
 
@@ -1756,27 +1305,18 @@ int main()
 
     while (true)
     {
-        cout << "\nSYSTEM\n1. HOD\n2. Academic Officer\n3. Instructor\n4. Attendant\n5. Save & Exit\nSelect: ";
+        cout << "\n--- UNIVERSITY SYSTEM ---\n";
+        cout << "1. HOD\n2. Academic Officer (Manage Infrastructure & Schedule)\n3. Instructor\n4. Attendant\n5. Save & Exit\nSelect: ";
         int role;
         InputOutput::SafeReadInt(role);
 
         switch (role)
         {
-        case 1:
-            hod.ShowMenu(&labDetails, &logDetails);
-            break;
-        case 2:
-            officer.ShowMenu(&labDetails, &venueDetails, &facultyDetails);
-            break;
-        case 3:
-            instructor.ShowMenu(&labDetails);
-            break;
-        case 4:
-            attendant.ShowMenu(&labDetails, &logDetails);
-            break;
-        case 5:
-            storage.Save();
-            return 0;
+        case 1: hod.ShowMenu(&labDetails, &logDetails); break;
+        case 2: officer.ShowMenu(&labDetails, &venueDetails, &facultyDetails); break;
+        case 3: instructor.ShowMenu(&labDetails); break;
+        case 4: attendant.ShowMenu(&labDetails, &logDetails); break;
+        case 5: storage.Save(); return 0;
         }
     }
 }
