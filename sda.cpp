@@ -73,6 +73,16 @@ public:
         return id > 0;
     }
 
+    static bool DoesNotContainDigits(const string &s)
+    {
+        for (char c : s)
+        {
+            if (isdigit(c))
+                return false;
+        }
+        return true;
+    }
+
     static bool IsLeapYear(int year)
     {
         return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
@@ -773,7 +783,9 @@ public:
             InputOutput::SafeReadString(name);
             if (!DataValidator::IsNonEmptyString(name))
                 cout << "Name cannot be empty.\n";
-        } while (!DataValidator::IsNonEmptyString(name));
+            else if (!DataValidator::DoesNotContainDigits(name))
+                cout << "Name cannot contain numbers.\n";
+        } while (!DataValidator::IsNonEmptyString(name) || !DataValidator::DoesNotContainDigits(name));
 
         vDetails->AddBuilding(CampusBlock(id, name));
         cout << "Building Added.\n";
@@ -848,7 +860,9 @@ public:
             InputOutput::SafeReadString(name);
             if (!DataValidator::IsNonEmptyString(name))
                 cout << "Cannot be empty.\n";
-        } while (!DataValidator::IsNonEmptyString(name));
+            else if (!DataValidator::DoesNotContainDigits(name))
+                cout << "Name cannot contain numbers.\n";
+        } while (!DataValidator::IsNonEmptyString(name) || !DataValidator::DoesNotContainDigits(name));
 
         fDetails->AddTeacher(UniversityTeacher(id, name));
         cout << "Teacher Added.\n";
@@ -878,7 +892,9 @@ public:
             InputOutput::SafeReadString(name);
             if (!DataValidator::IsNonEmptyString(name))
                 cout << "Cannot be empty.\n";
-        } while (!DataValidator::IsNonEmptyString(name));
+            else if (!DataValidator::DoesNotContainDigits(name))
+                cout << "Name cannot contain numbers.\n";
+        } while (!DataValidator::IsNonEmptyString(name) || !DataValidator::DoesNotContainDigits(name));
 
         fDetails->AddTA(TeachingAssistant(id, name));
         cout << "TA Added.\n";
