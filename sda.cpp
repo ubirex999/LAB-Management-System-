@@ -747,6 +747,36 @@ public:
         cout << "TA Added.\n";
     }
 
+    // --- Infrastructure Views (New) ---
+
+    void ViewInfrastructure(VenueDetails *v, FacultyDetails *f) {
+        cout << "\n--- VIEW INFRASTRUCTURE ---\n";
+        cout << "1. Buildings\n2. Rooms\n3. Teachers\n4. TAs\nSelect: ";
+        int choice;
+        InputOutput::SafeReadInt(choice);
+
+        if (choice == 1) {
+            auto& bldgs = v->GetAllBuildings();
+            if (bldgs.empty()) cout << "No buildings recorded.\n";
+            else for (auto& b : bldgs) cout << "ID: " << b.GetId() << " | Name: " << b.GetName() << endl;
+        }
+        else if (choice == 2) {
+            auto& rooms = v->GetAllRooms();
+            if (rooms.empty()) cout << "No rooms recorded.\n";
+            else for (auto& r : rooms) cout << "ID: " << r.GetId() << " | Room No: " << r.GetRoomNumber() << " | Building ID: " << r.GetBuildingId() << endl;
+        }
+        else if (choice == 3) {
+            auto& teachers = f->GetAllTeachers();
+            if (teachers.empty()) cout << "No teachers recorded.\n";
+            else for (auto& t : teachers) cout << "ID: " << t.GetId() << " | Name: " << t.GetName() << endl;
+        }
+        else if (choice == 4) {
+            auto& tas = f->GetAllTAs();
+            if (tas.empty()) cout << "No TAs recorded.\n";
+            else for (auto& t : tas) cout << "ID: " << t.GetId() << " | Name: " << t.GetName() << endl;
+        }
+    }
+
     // --- Core Methods ---
 
     void ViewCompleteLabDetails(LabDetails *lDetails)
@@ -780,8 +810,19 @@ public:
         cout << "Building ID: "; InputOutput::SafeReadInt(bId);
         cout << "Room ID: "; InputOutput::SafeReadInt(rId);
         cout << "Day: "; InputOutput::SafeReadString(day);
-        cout << "Start (HH:MM): "; InputOutput::SafeReadString(s);
-        cout << "End (HH:MM): "; InputOutput::SafeReadString(e);
+        
+        // Strict Validation Loops restored
+        do {
+            cout << "Start (HH:MM): "; InputOutput::SafeReadString(s);
+            if(!DataValidator::IsValidTime(s)) cout << "Invalid time format.\n";
+        } while(!DataValidator::IsValidTime(s));
+
+        do {
+            cout << "End (HH:MM): "; InputOutput::SafeReadString(e);
+            if(!DataValidator::IsValidTime(e)) cout << "Invalid time format.\n";
+        } while(!DataValidator::IsValidTime(e));
+
+        if (!DataValidator::IsStartBeforeEnd(s, e)) { cout << "Error: Start must be before End.\n"; return; }
 
         UniversityTeacher *t = fDetails->FindTeacher(teacherId);
         CampusBlock *b = vDetails->FindBuilding(bId);
@@ -878,7 +919,7 @@ public:
     void ShowMenu(LabDetails *l, VenueDetails *v, FacultyDetails *f) {
         while(true) {
             cout << "\n--- ACADEMIC OFFICER ---\n";
-            cout << "1. Add Infrastructure (Building/Room/Faculty)\n2. Schedule Section\n3. View Details\n4. View Makeup Requests\n5. Schedule Makeup\n6. Logout\nSelect: ";
+            cout << "1. Add Infrastructure (Building/Room/Faculty)\n2. Schedule Section\n3. View Details\n4. View Infrastructure\n5. View Makeup Requests\n6. Schedule Makeup\n7. Logout\nSelect: ";
             int ch; InputOutput::SafeReadInt(ch);
             if(ch==1) {
                 cout << "1. Building, 2. Room, 3. Teacher, 4. TA: ";
@@ -890,8 +931,9 @@ public:
             }
             else if(ch==2) ScheduleSection(l, v, f);
             else if(ch==3) ViewCompleteLabDetails(l);
-            else if(ch==4) ViewMakeupRequests(l);
-            else if(ch==5) ScheduleMakeupLab(l, v, f);
+            else if(ch==4) ViewInfrastructure(v, f);
+            else if(ch==5) ViewMakeupRequests(l);
+            else if(ch==6) ScheduleMakeupLab(l, v, f);
             else return;
         }
     }
@@ -946,8 +988,20 @@ public:
                 cout << "Lab ID: "; InputOutput::SafeReadInt(id);
                 cout << "Section: "; InputOutput::SafeReadString(sec);
                 cout << "Date: "; InputOutput::SafeReadString(date);
-                cout << "Start: "; InputOutput::SafeReadString(s);
-                cout << "End: "; InputOutput::SafeReadString(e);
+
+                // Validation loops
+                do {
+                    cout << "Start (HH:MM): "; InputOutput::SafeReadString(s);
+                    if(!DataValidator::IsValidTime(s)) cout << "Invalid time format.\n";
+                } while(!DataValidator::IsValidTime(s));
+
+                do {
+                    cout << "End (HH:MM): "; InputOutput::SafeReadString(e);
+                    if(!DataValidator::IsValidTime(e)) cout << "Invalid time format.\n";
+                } while(!DataValidator::IsValidTime(e));
+
+                if (!DataValidator::IsStartBeforeEnd(s, e)) { cout << "Error: Start must be before End.\n"; continue; }
+
                 RequestMakeupLab(lDetails, id, sec, date, s, e);
             }
             else return;
@@ -1010,8 +1064,18 @@ public:
                 cout << "Date: "; InputOutput::SafeReadString(d);
                 cout << "Leave? (1/0): "; InputOutput::SafeReadInt(leave);
                 if (!leave) {
-                    cout << "Start: "; InputOutput::SafeReadString(s);
-                    cout << "End: "; InputOutput::SafeReadString(e);
+                    // Validation loops
+                    do {
+                        cout << "Start (HH:MM): "; InputOutput::SafeReadString(s);
+                        if(!DataValidator::IsValidTime(s)) cout << "Invalid time format.\n";
+                    } while(!DataValidator::IsValidTime(s));
+
+                    do {
+                        cout << "End (HH:MM): "; InputOutput::SafeReadString(e);
+                        if(!DataValidator::IsValidTime(e)) cout << "Invalid time format.\n";
+                    } while(!DataValidator::IsValidTime(e));
+
+                    if (!DataValidator::IsStartBeforeEnd(s, e)) { cout << "Error: Start must be before End.\n"; continue; }
                 }
                 FillTimeSheet(lDetails, logDetails, id, sec, d, s, e, leave);
             }
