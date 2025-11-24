@@ -465,11 +465,14 @@ private:
         }
 
         vector<string> dayOrder = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
+        set<string> processedDays;
 
+        // 1. Print Standard Days
         for (const string &day : dayOrder)
         {
             if (scheduleByDay.find(day) != scheduleByDay.end())
             {
+                processedDays.insert(day);
                 cout << "\n=== " << day << " ===\n";
                 cout << string(50, '-') << "\n";
 
@@ -499,6 +502,39 @@ private:
                 }
             }
         }
+
+        // 2. Print Non-Standard Days (Dates that don't contain "Monday" etc.)
+        for (const auto& pair : scheduleByDay) {
+            if (processedDays.find(pair.first) == processedDays.end()) {
+                cout << "\n=== " << pair.first << " ===\n";
+                cout << string(50, '-') << "\n";
+                for (const auto &entry : pair.second)
+                {
+                    CourseLaboratory *lab = entry.first;
+                    ClassSection *sec = entry.second;
+
+                    cout << "\nLab ID: " << lab->GetLabId() << " | Course: " << lab->GetCourseCode() << "\n";
+                    cout << "  Section: " << sec->GetSectionName() << "\n";
+                    cout << "  Time: " << sec->GetScheduleTime().GetStartTime() << " - " << sec->GetScheduleTime().GetEndTime() << "\n";
+                    cout << "  Venue: " << (sec->GetBuilding() ? sec->GetBuilding()->GetName() : "N/A")
+                         << " - Room " << (sec->GetRoom() ? sec->GetRoom()->GetRoomNumber() : "N/A") << "\n";
+                    cout << "  Instructor: " << (sec->GetTeacher() ? sec->GetTeacher()->GetName() : "Unassigned") << "\n";
+                    cout << "  TAs: ";
+                    if (sec->GetAssistants().empty()) cout << "None assigned\n";
+                    else
+                    {
+                        const auto &tas = sec->GetAssistants();
+                        for (size_t i = 0; i < tas.size(); i++)
+                        {
+                            cout << (tas[i] ? tas[i]->GetName() : "Unknown");
+                            if (i < tas.size() - 1) cout << ", ";
+                        }
+                        cout << "\n";
+                    }
+                }
+            }
+        }
+
         cout << "\n========================================\n";
     }
 
