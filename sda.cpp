@@ -1,3 +1,15 @@
+/**
+ * @file UniversitySystem.cpp
+ * @brief A comprehensive university management system handling scheduling,
+ * infrastructure, and attendance.
+ * * This system supports multiple roles:
+ * - HOD: View schedules and reports.
+ * - Academic Officer: Manage infrastructure (Buildings, Rooms, Faculty) and schedule classes.
+ * - Instructor: Request makeup labs.
+ * - Attendant: Mark attendance.
+ * * Data is persisted using binary files for efficiency.
+ */
+
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -9,41 +21,73 @@
 
 using namespace std;
 
-// Utility class for Input/Output operations
+// ==========================================
+// UTILITY CLASSES
+// ==========================================
+
+/**
+ * @class InputOutput
+ * @brief Handles safe user input to prevent buffer overflows and type mismatches.
+ */
 class InputOutput
 {
 public:
+    /**
+     * @brief Safely reads an integer from standard input.
+     * * Loops until a valid integer is provided, clearing the error flag
+     * and ignore buffer if input fails.
+     * * @param val Reference to the integer variable to store input.
+     */
     static void SafeReadInt(int &val)
     {
         while (!(cin >> val))
         {
-            cin.clear();
-            cin.ignore(1000, '\n');
+            cin.clear();            // Clear error flag
+            cin.ignore(1000, '\n'); // Discard invalid input
             cout << "Invalid integer input. Please try again: ";
         }
-        cin.ignore(1000, '\n');
+        cin.ignore(1000, '\n'); // Consume the newline character left in buffer
     }
 
+    /**
+     * @brief Safely reads a line of text including spaces.
+     * @param val Reference to string variable.
+     */
     static void SafeReadString(string &val)
     {
         getline(cin, val);
     }
 };
 
-// Data Validation logic
+/**
+ * @class DataValidator
+ * @brief Static helper class containing all validation logic for the system.
+ * * This class ensures data integrity for Times, Dates, IDs, and Strings
+ * before they are processed by the business logic.
+ */
 class DataValidator
 {
 public:
+    /**
+     * @brief Validates time string format.
+     * @param t Time string (expected HH:MM).
+     * @return true if valid, false otherwise.
+     */
     static bool IsValidTime(const string &t)
     {
+        // Check length and separator position
         if (t.length() != 5 || t[2] != ':')
             return false;
+
+        // Check if characters are digits
         if (!isdigit(t[0]) || !isdigit(t[1]) || !isdigit(t[3]) || !isdigit(t[4]))
             return false;
+
         try
         {
             int h = stoi(t.substr(0, 2));
             int m = stoi(t.substr(3, 2));
+            // Validate logical range for hours and minutes
             return (h >= 0 && h < 24 && m >= 0 && m < 60);
         }
         catch (...)
@@ -52,27 +96,47 @@ public:
         }
     }
 
+    /**
+     * @brief Checks if start time is logically before end time.
+     * @param start Start time string.
+     * @param end End time string.
+     * @return true if Start < End.
+     */
     static bool IsStartBeforeEnd(const string &start, const string &end)
     {
+        // Ensure basic format is valid first
         if (!IsValidTime(start) || !IsValidTime(end))
             return false;
+
         int h1 = stoi(start.substr(0, 2));
         int m1 = stoi(start.substr(3, 2));
         int h2 = stoi(end.substr(0, 2));
         int m2 = stoi(end.substr(3, 2));
+
+        // Compare total minutes from midnight
         return (h1 * 60 + m1) < (h2 * 60 + m2);
     }
 
+    /**
+     * @brief Checks if a string is not empty and not just whitespace.
+     */
     static bool IsNonEmptyString(const string &s)
     {
         return !s.empty() && s.find_first_not_of(" \t\n\r") != string::npos;
     }
 
+    /**
+     * @brief Validates that an ID is a positive integer.
+     */
     static bool IsValidID(int id)
     {
         return id > 0;
     }
 
+    /**
+     * @brief Ensures a string contains no numeric characters.
+     * Used for names of People and Buildings.
+     */
     static bool DoesNotContainDigits(const string &s)
     {
         for (char c : s)
@@ -83,19 +147,28 @@ public:
         return true;
     }
 
+    /**
+     * @brief Helper to determine leap years for date validation.
+     */
     static bool IsLeapYear(int year)
     {
         return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
     }
 
+    /**
+     * @brief Validates a date string format and logical correctness.
+     * @param d Date string (YYYY-MM-DD).
+     * @return true if valid.
+     */
     static bool IsValidDate(const string &d)
     {
-        // Expected Format: YYYY-MM-DD
+        // Expected Format check: YYYY-MM-DD (Length 10)
         if (d.length() != 10)
             return false;
         if (d[4] != '-' || d[7] != '-')
             return false;
 
+        // Ensure all other characters are digits
         for (int i = 0; i < 10; i++)
         {
             if (i == 4 || i == 7)
@@ -110,12 +183,16 @@ public:
             int month = stoi(d.substr(5, 2));
             int day = stoi(d.substr(8, 2));
 
+            // Range checks
             if (year < 1900 || year > 2100)
                 return false;
             if (month < 1 || month > 12)
                 return false;
 
+            // Days in each month
             int daysInMonth[] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+
+            // Adjust February for leap years
             if (IsLeapYear(year))
                 daysInMonth[2] = 29;
 
@@ -128,8 +205,14 @@ public:
     }
 };
 
-// Core Domain Entities
+// ==========================================
+// CORE DOMAIN ENTITIES
+// ==========================================
 
+/**
+ * @class DateAndTime
+ * @brief Encapsulates scheduling timing information.
+ */
 class DateAndTime
 {
 private:
@@ -169,7 +252,7 @@ private:
     int roomId;
     string roomNumber;
     int buildingId;
-    CampusBlock *building;
+    CampusBlock *building; // Pointer to the parent building object
 
 public:
     LectureHall() : roomId(0), roomNumber(""), buildingId(0), building(nullptr) {}
@@ -212,6 +295,11 @@ public:
     string GetName() const { return name; }
 };
 
+/**
+ * @class ClassSection
+ * @brief Represents a specific scheduled instance of a course.
+ * Links Teachers, TAs, Rooms, and Times.
+ */
 class ClassSection
 {
 private:
@@ -238,6 +326,7 @@ public:
         assistants.push_back(ta);
     }
 
+    // Getters
     string GetSectionName() const { return sectionName; }
     UniversityTeacher *GetTeacher() const { return teacher; }
     const vector<TeachingAssistant *> &GetAssistants() const { return assistants; }
@@ -246,6 +335,7 @@ public:
     DateAndTime &GetScheduleTime() { return scheduleTime; }
     const DateAndTime &GetScheduleTime() const { return scheduleTime; }
 
+    // Setters used for data loading reconstruction
     void SetSectionName(const string &n) { sectionName = n; }
     void SetTeacher(UniversityTeacher *t) { teacher = t; }
     void SetBuilding(CampusBlock *b) { building = b; }
@@ -332,7 +422,9 @@ public:
     void SetRequestedEndTime(const string &e) { requestedEndTime = e; }
 };
 
-// Interfaces and Implementations
+// ==========================================
+// DETAILS INTERFACES & IMPLEMENTATIONS
+// ==========================================
 
 class LabDetails
 {
@@ -371,6 +463,8 @@ public:
     virtual vector<UniversityTeacher> &GetAllTeachers() = 0;
     virtual vector<TeachingAssistant> &GetAllTAs() = 0;
 };
+
+// In-Memory Implementations using STL vectors
 
 class InMemoryLabDetails : public LabDetails
 {
@@ -462,7 +556,9 @@ public:
     vector<TeachingAssistant> &GetAllTAs() override { return tas; }
 };
 
-// Actor Roles
+// ==========================================
+// ACTOR ROLES
+// ==========================================
 
 class Person
 {
@@ -477,6 +573,9 @@ public:
 class HOD : public Person
 {
 private:
+    /**
+     * @brief Calculates the duration in hours between two time strings.
+     */
     float CalculateHours(const string &start, const string &end)
     {
         int h1 = stoi(start.substr(0, 2));
@@ -486,6 +585,9 @@ private:
         return (float)((h2 * 60 + m2) - (h1 * 60 + m1)) / 60.0f;
     }
 
+    /**
+     * @brief Attempts to extract day name from date string or returns original.
+     */
     string ExtractDay(const string &date)
     {
         vector<string> days = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
@@ -502,6 +604,10 @@ private:
         return date.find(weekIdentifier) != string::npos || weekIdentifier == "all";
     }
 
+    /**
+     * @brief Displays the full schedule for the week, grouped by Day.
+     * It iterates through all labs and sections, grouping them by day.
+     */
     void GenerateCompleteWeeklySchedule(LabDetails *lDetails)
     {
         cout << "\nComplete Lab Schedule - Entire Week\n";
@@ -515,6 +621,7 @@ private:
             return;
         }
 
+        // Group by Day (String) -> List of Lab/Section pairs
         map<string, vector<pair<CourseLaboratory *, ClassSection *>>> scheduleByDay;
         for (auto &lab : labs)
         {
@@ -525,9 +632,11 @@ private:
             }
         }
 
+        // Define standard order for presentation
         vector<string> dayOrder = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
         set<string> processedDays;
 
+        // Loop through standard days first
         for (const string &day : dayOrder)
         {
             if (scheduleByDay.find(day) != scheduleByDay.end())
@@ -549,6 +658,7 @@ private:
             }
         }
 
+        // Loop through any non-standard date strings (e.g. "2023-10-15")
         for (const auto &pair : scheduleByDay)
         {
             if (processedDays.find(pair.first) == processedDays.end())
@@ -659,6 +769,10 @@ public:
 class AcademicOfficer : public Person
 {
 private:
+    /**
+     * @brief Deserializes makeup requests from disk.
+     * Reconstruction requires linking the Lab ID back to the live Lab object.
+     */
     vector<MakeupLabRequest> ReadMakeupRequestsFromBinary(LabDetails *lDetails)
     {
         vector<MakeupLabRequest> requests;
@@ -722,6 +836,9 @@ private:
         return requests;
     }
 
+    /**
+     * @brief Serializes current makeup requests to disk.
+     */
     void WriteMakeupRequestsToBinary(const vector<MakeupLabRequest> &requests)
     {
         ofstream out("makeup_requests.dat", ios::binary | ios::trunc);
@@ -763,6 +880,7 @@ public:
     {
         int id;
         string name;
+        // Validate ID
         do
         {
             cout << "Enter Building ID (>0): ";
@@ -771,12 +889,14 @@ public:
                 cout << "Invalid ID. Must be > 0.\n";
         } while (!DataValidator::IsValidID(id));
 
+        // Check duplication
         if (vDetails->FindBuilding(id))
         {
             cout << "ID exists.\n";
             return;
         }
 
+        // Validate Name (No empty, no digits)
         do
         {
             cout << "Enter Building Name: ";
@@ -854,6 +974,7 @@ public:
             return;
         }
 
+        // Validate Name (No empty, no digits)
         do
         {
             cout << "Enter Name: ";
@@ -886,6 +1007,7 @@ public:
             return;
         }
 
+        // Validate Name (No empty, no digits)
         do
         {
             cout << "Enter Name: ";
@@ -1306,6 +1428,7 @@ public:
                 CourseLaboratory *l = nullptr;
                 ClassSection *section = nullptr;
 
+                // Ensure we only makeup scheduled labs
                 do
                 {
                     cout << "Lab ID: ";
@@ -1415,6 +1538,7 @@ public:
                 CourseLaboratory *l = nullptr;
                 ClassSection *section = nullptr;
 
+                // Ensure filling time sheet only for scheduled labs
                 do
                 {
                     cout << "Lab ID: ";
@@ -1503,6 +1627,7 @@ public:
 
     void Save()
     {
+        // Persist Venue Data
         ofstream vOut("venue.dat", ios::binary);
         if (vOut.is_open())
         {
@@ -1530,6 +1655,7 @@ public:
             vOut.close();
         }
 
+        // Persist Faculty Data
         ofstream fOut("faculty.dat", ios::binary);
         if (fOut.is_open())
         {
@@ -1555,6 +1681,7 @@ public:
             fOut.close();
         }
 
+        // Persist Schedule
         ofstream sOut("schedule.dat", ios::binary);
         if (sOut.is_open())
         {
@@ -1599,6 +1726,7 @@ public:
             sOut.close();
         }
 
+        // Persist Logs
         ofstream lOut("logs.dat", ios::binary);
         if (lOut.is_open())
         {
@@ -1624,6 +1752,7 @@ public:
 
     void Load()
     {
+        // Load Venue Data
         ifstream vIn("venue.dat", ios::binary);
         if (vIn.is_open())
         {
@@ -1652,6 +1781,7 @@ public:
             vIn.close();
         }
 
+        // Load Faculty Data
         ifstream fIn("faculty.dat", ios::binary);
         if (fIn.is_open())
         {
@@ -1676,6 +1806,7 @@ public:
             fIn.close();
         }
 
+        // Load Schedule Data
         ifstream sIn("schedule.dat", ios::binary);
         if (sIn.is_open())
         {
@@ -1727,6 +1858,7 @@ public:
             sIn.close();
         }
 
+        // Load Logs
         ifstream lIn("logs.dat", ios::binary);
         if (lIn.is_open())
         {
