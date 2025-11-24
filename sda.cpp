@@ -30,6 +30,7 @@ public:
     static void SafeReadString(string &val)
     {
         getline(cin, val);
+        // Trim leading/trailing whitespace could be added here if strictly needed
     }
 };
 
@@ -38,20 +39,13 @@ class DataValidator
 public:
     static bool IsValidTime(const string &t)
     {
-        if (t.length() != 5 || t[2] != ':')
-            return false;
-        if (!isdigit(t[0]) || !isdigit(t[1]) || !isdigit(t[3]) || !isdigit(t[4]))
-            return false;
-        try
-        {
+        if (t.length() != 5 || t[2] != ':') return false;
+        if (!isdigit(t[0]) || !isdigit(t[1]) || !isdigit(t[3]) || !isdigit(t[4])) return false;
+        try {
             int h = stoi(t.substr(0, 2));
             int m = stoi(t.substr(3, 2));
             return (h >= 0 && h < 24 && m >= 0 && m < 60);
-        }
-        catch (...)
-        {
-            return false;
-        }
+        } catch (...) { return false; }
     }
 
     static bool IsStartBeforeEnd(const string &start, const string &end)
@@ -61,6 +55,21 @@ public:
         int h2 = stoi(end.substr(0, 2));
         int m2 = stoi(end.substr(3, 2));
         return (h1 * 60 + m1) < (h2 * 60 + m2);
+    }
+
+    static bool IsNonEmptyString(const string &s) {
+        return !s.empty() && s.find_first_not_of(" \t\n\r") != string::npos;
+    }
+
+    static bool IsValidID(int id) {
+        return id > 0;
+    }
+
+    static bool IsValidDate(const string &d) {
+        // Simple check for "DD-MM-YYYY" or "YYYY-MM-DD" length and separators
+        // Real world would use <chrono> or regex
+        if (d.length() < 8) return false; 
+        return (d.find('-') != string::npos || d.find('/') != string::npos);
     }
 };
 
@@ -105,17 +114,17 @@ class LectureHall
 {
 private:
     int roomId;
-    int roomNumber;
+    string roomNumber;     // Changed to string for "A-101", "Lab-2" etc.
     int buildingId;        // Stored for serialization
     CampusBlock *building; // Runtime pointer
 
 public:
-    LectureHall() : roomId(0), roomNumber(0), buildingId(0), building(nullptr) {}
-    LectureHall(int id, int num, int bId, CampusBlock *bldg)
+    LectureHall() : roomId(0), roomNumber(""), buildingId(0), building(nullptr) {}
+    LectureHall(int id, string num, int bId, CampusBlock *bldg)
         : roomId(id), roomNumber(num), buildingId(bId), building(bldg) {}
 
     int GetId() const { return roomId; }
-    int GetRoomNumber() const { return roomNumber; }
+    string GetRoomNumber() const { return roomNumber; }
     int GetBuildingId() const { return buildingId; }
     CampusBlock *GetBuilding() const { return building; }
     
@@ -473,7 +482,7 @@ private:
                     cout << "  Section: " << sec->GetSectionName() << "\n";
                     cout << "  Time: " << sec->GetScheduleTime().GetStartTime() << " - " << sec->GetScheduleTime().GetEndTime() << "\n";
                     cout << "  Venue: " << (sec->GetBuilding() ? sec->GetBuilding()->GetName() : "N/A")
-                         << " - Room " << (sec->GetRoom() ? to_string(sec->GetRoom()->GetRoomNumber()) : "N/A") << "\n";
+                         << " - Room " << (sec->GetRoom() ? sec->GetRoom()->GetRoomNumber() : "N/A") << "\n";
                     cout << "  Instructor: " << (sec->GetTeacher() ? sec->GetTeacher()->GetName() : "Unassigned") << "\n";
                     cout << "  TAs: ";
                     if (sec->GetAssistants().empty()) cout << "None assigned\n";
@@ -708,19 +717,35 @@ public:
     // --- Dynamic Infrastructure Methods ---
     void AddBuilding(VenueDetails *vDetails) {
         int id; string name;
-        cout << "Enter Building ID: "; InputOutput::SafeReadInt(id);
+        do {
+            cout << "Enter Building ID (>0): "; InputOutput::SafeReadInt(id);
+        } while (!DataValidator::IsValidID(id));
+        
         if(vDetails->FindBuilding(id)) { cout << "ID exists.\n"; return; }
-        cout << "Enter Building Name: "; InputOutput::SafeReadString(name);
+        
+        do {
+            cout << "Enter Building Name: "; InputOutput::SafeReadString(name);
+        } while (!DataValidator::IsNonEmptyString(name));
+        
         vDetails->AddBuilding(CampusBlock(id, name));
         cout << "Building Added.\n";
     }
 
     void AddRoom(VenueDetails *vDetails) {
-        int id, num, bId;
-        cout << "Enter Room ID: "; InputOutput::SafeReadInt(id);
+        int id, bId; string num;
+        do {
+            cout << "Enter Room ID (>0): "; InputOutput::SafeReadInt(id);
+        } while (!DataValidator::IsValidID(id));
+        
         if(vDetails->FindRoom(id)) { cout << "ID exists.\n"; return; }
-        cout << "Enter Room Number: "; InputOutput::SafeReadInt(num);
-        cout << "Enter Building ID: "; InputOutput::SafeReadInt(bId);
+        
+        do {
+            cout << "Enter Room Number/Name (e.g., 101, A-102): "; InputOutput::SafeReadString(num);
+        } while (!DataValidator::IsNonEmptyString(num));
+        
+        do {
+            cout << "Enter Building ID (>0): "; InputOutput::SafeReadInt(bId);
+        } while (!DataValidator::IsValidID(bId));
         
         CampusBlock* b = vDetails->FindBuilding(bId);
         if(!b) { cout << "Building ID not found.\n"; return; }
@@ -731,23 +756,37 @@ public:
 
     void AddTeacher(FacultyDetails *fDetails) {
         int id; string name;
-        cout << "Enter Teacher ID: "; InputOutput::SafeReadInt(id);
+        do {
+            cout << "Enter Teacher ID (>0): "; InputOutput::SafeReadInt(id);
+        } while (!DataValidator::IsValidID(id));
+        
         if(fDetails->FindTeacher(id)) { cout << "ID exists.\n"; return; }
-        cout << "Enter Name: "; InputOutput::SafeReadString(name);
+        
+        do {
+            cout << "Enter Name: "; InputOutput::SafeReadString(name);
+        } while (!DataValidator::IsNonEmptyString(name));
+        
         fDetails->AddTeacher(UniversityTeacher(id, name));
         cout << "Teacher Added.\n";
     }
 
     void AddTA(FacultyDetails *fDetails) {
         int id; string name;
-        cout << "Enter TA ID: "; InputOutput::SafeReadInt(id);
+        do {
+            cout << "Enter TA ID (>0): "; InputOutput::SafeReadInt(id);
+        } while (!DataValidator::IsValidID(id));
+        
         if(fDetails->FindTA(id)) { cout << "ID exists.\n"; return; }
-        cout << "Enter Name: "; InputOutput::SafeReadString(name);
+        
+        do {
+            cout << "Enter Name: "; InputOutput::SafeReadString(name);
+        } while (!DataValidator::IsNonEmptyString(name));
+        
         fDetails->AddTA(TeachingAssistant(id, name));
         cout << "TA Added.\n";
     }
 
-    // --- Infrastructure Views (New) ---
+    // --- Infrastructure Views ---
 
     void ViewInfrastructure(VenueDetails *v, FacultyDetails *f) {
         cout << "\n--- VIEW INFRASTRUCTURE ---\n";
@@ -763,7 +802,7 @@ public:
         else if (choice == 2) {
             auto& rooms = v->GetAllRooms();
             if (rooms.empty()) cout << "No rooms recorded.\n";
-            else for (auto& r : rooms) cout << "ID: " << r.GetId() << " | Room No: " << r.GetRoomNumber() << " | Building ID: " << r.GetBuildingId() << endl;
+            else for (auto& r : rooms) cout << "ID: " << r.GetId() << " | Room: " << r.GetRoomNumber() << " | Building ID: " << r.GetBuildingId() << endl;
         }
         else if (choice == 3) {
             auto& teachers = f->GetAllTeachers();
@@ -792,7 +831,7 @@ public:
             {
                 cout << "  Section: " << sec.GetSectionName() << "\n";
                 cout << "  Instructor: " << (sec.GetTeacher() ? sec.GetTeacher()->GetName() : "Unassigned") << "\n";
-                cout << "  Room: " << (sec.GetRoom() ? to_string(sec.GetRoom()->GetRoomNumber()) : "N/A") << "\n";
+                cout << "  Room: " << (sec.GetRoom() ? sec.GetRoom()->GetRoomNumber() : "N/A") << "\n";
                 cout << "  Time: " << sec.GetScheduleTime().GetDate() << " " << sec.GetScheduleTime().GetStartTime() << "-" << sec.GetScheduleTime().GetEndTime() << "\n";
             }
         }
@@ -803,13 +842,15 @@ public:
         int labId, teacherId, bId, rId, taCount;
         string code, secName, day, s, e;
 
-        cout << "Lab ID: "; InputOutput::SafeReadInt(labId);
-        cout << "Course Code: "; InputOutput::SafeReadString(code);
-        cout << "Section Name: "; InputOutput::SafeReadString(secName);
-        cout << "Teacher ID: "; InputOutput::SafeReadInt(teacherId);
-        cout << "Building ID: "; InputOutput::SafeReadInt(bId);
-        cout << "Room ID: "; InputOutput::SafeReadInt(rId);
-        cout << "Day: "; InputOutput::SafeReadString(day);
+        do { cout << "Lab ID: "; InputOutput::SafeReadInt(labId); } while(!DataValidator::IsValidID(labId));
+        do { cout << "Course Code: "; InputOutput::SafeReadString(code); } while(!DataValidator::IsNonEmptyString(code));
+        do { cout << "Section Name: "; InputOutput::SafeReadString(secName); } while(!DataValidator::IsNonEmptyString(secName));
+        
+        do { cout << "Teacher ID: "; InputOutput::SafeReadInt(teacherId); } while(!DataValidator::IsValidID(teacherId));
+        do { cout << "Building ID: "; InputOutput::SafeReadInt(bId); } while(!DataValidator::IsValidID(bId));
+        do { cout << "Room ID: "; InputOutput::SafeReadInt(rId); } while(!DataValidator::IsValidID(rId));
+        
+        do { cout << "Day (e.g. Monday): "; InputOutput::SafeReadString(day); } while(!DataValidator::IsNonEmptyString(day));
         
         // Strict Validation Loops restored
         do {
@@ -887,9 +928,9 @@ public:
         MakeupLabRequest selected = requests[choice - 1];
 
         int teacherId, bId, rId, taCount;
-        cout << "Instructor ID: "; InputOutput::SafeReadInt(teacherId);
-        cout << "Building ID: "; InputOutput::SafeReadInt(bId);
-        cout << "Room ID: "; InputOutput::SafeReadInt(rId);
+        do { cout << "Instructor ID: "; InputOutput::SafeReadInt(teacherId); } while(!DataValidator::IsValidID(teacherId));
+        do { cout << "Building ID: "; InputOutput::SafeReadInt(bId); } while(!DataValidator::IsValidID(bId));
+        do { cout << "Room ID: "; InputOutput::SafeReadInt(rId); } while(!DataValidator::IsValidID(rId));
 
         UniversityTeacher *t = fDetails->FindTeacher(teacherId);
         CampusBlock *b = vDetails->FindBuilding(bId);
@@ -918,11 +959,27 @@ public:
 
     void ShowMenu(LabDetails *l, VenueDetails *v, FacultyDetails *f) {
         while(true) {
-            cout << "\n--- ACADEMIC OFFICER ---\n";
-            cout << "1. Add Infrastructure (Building/Room/Faculty)\n2. Schedule Section\n3. View Details\n4. View Infrastructure\n5. View Makeup Requests\n6. Schedule Makeup\n7. Logout\nSelect: ";
+            cout << "\n--- ACADEMIC OFFICER DASHBOARD ---\n";
+            cout << "1. Add Infrastructure (Building/Room/Faculty)\n";
+            cout << "2. Schedule Section\n";
+            cout << "3. View Complete Lab Schedule\n";
+            cout << "4. View Existing Infrastructure\n";
+            cout << "5. View Makeup Requests\n";
+            cout << "6. Schedule Makeup Lab\n";
+            cout << "7. Logout\n";
+            cout << "Select: ";
+            
             int ch; InputOutput::SafeReadInt(ch);
+            
             if(ch==1) {
-                cout << "1. Building, 2. Room, 3. Teacher, 4. TA: ";
+                cout << "\n--- ADD INFRASTRUCTURE ---\n";
+                cout << "1. Add Building\n";
+                cout << "2. Add Room\n";
+                cout << "3. Add Teacher\n";
+                cout << "4. Add Teaching Assistant\n";
+                cout << "0. Back\n";
+                cout << "Select: ";
+                
                 int sub; InputOutput::SafeReadInt(sub);
                 if(sub==1) AddBuilding(v);
                 else if(sub==2) AddRoom(v);
@@ -985,9 +1042,13 @@ public:
             if (choice == 1)
             {
                 int id; string sec, date, s, e;
-                cout << "Lab ID: "; InputOutput::SafeReadInt(id);
-                cout << "Section: "; InputOutput::SafeReadString(sec);
-                cout << "Date: "; InputOutput::SafeReadString(date);
+                do { cout << "Lab ID: "; InputOutput::SafeReadInt(id); } while (!DataValidator::IsValidID(id));
+                do { cout << "Section: "; InputOutput::SafeReadString(sec); } while(!DataValidator::IsNonEmptyString(sec));
+                
+                do { 
+                    cout << "Date (YYYY-MM-DD): "; InputOutput::SafeReadString(date); 
+                    if (!DataValidator::IsValidDate(date)) cout << "Invalid Date.\n";
+                } while(!DataValidator::IsValidDate(date));
 
                 // Validation loops
                 do {
@@ -1059,10 +1120,15 @@ public:
             else if (choice == 2)
             {
                 int id, leave; string sec, d, s, e;
-                cout << "Lab ID: "; InputOutput::SafeReadInt(id);
-                cout << "Section: "; InputOutput::SafeReadString(sec);
-                cout << "Date: "; InputOutput::SafeReadString(d);
+                do { cout << "Lab ID: "; InputOutput::SafeReadInt(id); } while (!DataValidator::IsValidID(id));
+                do { cout << "Section: "; InputOutput::SafeReadString(sec); } while(!DataValidator::IsNonEmptyString(sec));
+                do { 
+                    cout << "Date (YYYY-MM-DD): "; InputOutput::SafeReadString(d); 
+                    if(!DataValidator::IsValidDate(d)) cout << "Invalid Date.\n";
+                } while(!DataValidator::IsValidDate(d));
+                
                 cout << "Leave? (1/0): "; InputOutput::SafeReadInt(leave);
+                
                 if (!leave) {
                     // Validation loops
                     do {
@@ -1139,10 +1205,9 @@ public:
             vOut.write(reinterpret_cast<const char*>(&rCount), sizeof(int));
             for(auto& r : rooms) {
                 int id = r.GetId();
-                int num = r.GetRoomNumber();
-                int bId = r.GetBuildingId(); // Store ID, not pointer
+                int bId = r.GetBuildingId(); 
                 vOut.write(reinterpret_cast<const char*>(&id), sizeof(int));
-                vOut.write(reinterpret_cast<const char*>(&num), sizeof(int));
+                WriteString(vOut, r.GetRoomNumber()); // Now writing string
                 vOut.write(reinterpret_cast<const char*>(&bId), sizeof(int));
             }
             vOut.close();
@@ -1188,7 +1253,6 @@ public:
                 for(auto& sec : secs) {
                     WriteString(sOut, sec.GetSectionName());
                     
-                    // Store IDs for relationships
                     int tId = (sec.GetTeacher() ? sec.GetTeacher()->GetId() : -1);
                     int bId = (sec.GetBuilding() ? sec.GetBuilding()->GetId() : -1);
                     int rId = (sec.GetRoom() ? sec.GetRoom()->GetId() : -1);
@@ -1213,7 +1277,7 @@ public:
             sOut.close();
         }
         
-        // 4. Save Logs (New addition to ensure consistency)
+        // 4. Save Logs
         ofstream lOut("logs.dat", ios::binary);
         if(lOut.is_open()) {
              auto& logs = logDetails->GetAllEntries();
@@ -1237,7 +1301,7 @@ public:
 
     void Load()
     {
-        // 1. Load Venue Data (Buildings FIRST, then Rooms)
+        // 1. Load Venue Data
         ifstream vIn("venue.dat", ios::binary);
         if(vIn.is_open()) {
             int bCount; vIn.read(reinterpret_cast<char*>(&bCount), sizeof(int));
@@ -1249,12 +1313,11 @@ public:
 
             int rCount; vIn.read(reinterpret_cast<char*>(&rCount), sizeof(int));
             for(int i=0; i<rCount && !vIn.eof(); i++) {
-                int id, num, bId;
+                int id, bId;
                 vIn.read(reinterpret_cast<char*>(&id), sizeof(int));
-                vIn.read(reinterpret_cast<char*>(&num), sizeof(int));
+                string num = ReadString(vIn); // Reading string now
                 vIn.read(reinterpret_cast<char*>(&bId), sizeof(int));
                 
-                // Re-link pointer
                 CampusBlock* b = venueDetails->FindBuilding(bId);
                 venueDetails->AddRoom(LectureHall(id, num, bId, b));
             }
@@ -1279,7 +1342,7 @@ public:
             fIn.close();
         }
 
-        // 3. Load Schedule (Dependent on Venue/Faculty)
+        // 3. Load Schedule
         ifstream sIn("schedule.dat", ios::binary);
         if(sIn.is_open()) {
             int lCount; sIn.read(reinterpret_cast<char*>(&lCount), sizeof(int));
@@ -1299,7 +1362,6 @@ public:
                     sIn.read(reinterpret_cast<char*>(&bId), sizeof(int));
                     sIn.read(reinterpret_cast<char*>(&rId), sizeof(int));
 
-                    // Re-link pointers using IDs
                     sec.SetTeacher(facultyDetails->FindTeacher(tId));
                     sec.SetBuilding(venueDetails->FindBuilding(bId));
                     sec.SetRoom(venueDetails->FindRoom(rId));
