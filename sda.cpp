@@ -1,6 +1,6 @@
 /**
- * @file UniversitySystem.cpp
- * @brief A comprehensive university management system handling scheduling,
+ * @file sda.cpp
+ * @brief A comprehensive lab management system handling scheduling,
  * infrastructure, and attendance.
  * * This system supports multiple roles:
  * - HOD: View schedules and reports.
