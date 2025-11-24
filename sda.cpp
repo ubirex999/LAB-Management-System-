@@ -9,31 +9,28 @@
 
 using namespace std;
 
-// ==========================================
-// UTILITY CLASSES
-// ==========================================
-
+// Utility class for Input/Output operations
 class InputOutput
 {
 public:
     static void SafeReadInt(int &val)
     {
-        if (!(cin >> val))
+        while (!(cin >> val))
         {
             cin.clear();
             cin.ignore(1000, '\n');
-            val = -1;
+            cout << "Invalid integer input. Please try again: ";
         }
-        cin.ignore(1000, '\n'); // Consume newline
+        cin.ignore(1000, '\n');
     }
 
     static void SafeReadString(string &val)
     {
         getline(cin, val);
-        // Trim leading/trailing whitespace could be added here if strictly needed
     }
 };
 
+// Data Validation logic
 class DataValidator
 {
 public:
@@ -50,6 +47,7 @@ public:
 
     static bool IsStartBeforeEnd(const string &start, const string &end)
     {
+        if (!IsValidTime(start) || !IsValidTime(end)) return false;
         int h1 = stoi(start.substr(0, 2));
         int m1 = stoi(start.substr(3, 2));
         int h2 = stoi(end.substr(0, 2));
@@ -65,17 +63,39 @@ public:
         return id > 0;
     }
 
+    static bool IsLeapYear(int year) {
+        return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+    }
+
     static bool IsValidDate(const string &d) {
-        // Simple check for "DD-MM-YYYY" or "YYYY-MM-DD" length and separators
-        // Real world would use <chrono> or regex
-        if (d.length() < 8) return false; 
-        return (d.find('-') != string::npos || d.find('/') != string::npos);
+        // Expected Format: YYYY-MM-DD
+        if (d.length() != 10) return false;
+        if (d[4] != '-' || d[7] != '-') return false;
+        
+        for (int i = 0; i < 10; i++) {
+            if (i == 4 || i == 7) continue;
+            if (!isdigit(d[i])) return false;
+        }
+
+        try {
+            int year = stoi(d.substr(0, 4));
+            int month = stoi(d.substr(5, 2));
+            int day = stoi(d.substr(8, 2));
+
+            if (year < 1900 || year > 2100) return false;
+            if (month < 1 || month > 12) return false;
+
+            int daysInMonth[] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+            if (IsLeapYear(year)) daysInMonth[2] = 29;
+
+            return day >= 1 && day <= daysInMonth[month];
+        } catch (...) {
+            return false;
+        }
     }
 };
 
-// ==========================================
-// CORE DOMAIN ENTITIES
-// ==========================================
+// Core Domain Entities
 
 class DateAndTime
 {
@@ -114,9 +134,9 @@ class LectureHall
 {
 private:
     int roomId;
-    string roomNumber;     // Changed to string for "A-101", "Lab-2" etc.
-    int buildingId;        // Stored for serialization
-    CampusBlock *building; // Runtime pointer
+    string roomNumber;
+    int buildingId;
+    CampusBlock *building;
 
 public:
     LectureHall() : roomId(0), roomNumber(""), buildingId(0), building(nullptr) {}
@@ -128,7 +148,7 @@ public:
     int GetBuildingId() const { return buildingId; }
     CampusBlock *GetBuilding() const { return building; }
     
-    void SetBuilding(CampusBlock* b) { building = b; } // Used during loading
+    void SetBuilding(CampusBlock* b) { building = b; }
 };
 
 class UniversityTeacher
@@ -193,7 +213,6 @@ public:
     DateAndTime &GetScheduleTime() { return scheduleTime; }
     const DateAndTime &GetScheduleTime() const { return scheduleTime; }
 
-    // Setters for Loading
     void SetSectionName(const string &n) { sectionName = n; }
     void SetTeacher(UniversityTeacher *t) { teacher = t; }
     void SetBuilding(CampusBlock *b) { building = b; }
@@ -280,9 +299,7 @@ public:
     void SetRequestedEndTime(const string &e) { requestedEndTime = e; }
 };
 
-// ==========================================
-// DETAILS INTERFACES & IMPLEMENTATIONS
-// ==========================================
+// Interfaces and Implementations
 
 class LabDetails
 {
@@ -321,8 +338,6 @@ public:
     virtual vector<UniversityTeacher>& GetAllTeachers() = 0;
     virtual vector<TeachingAssistant>& GetAllTAs() = 0;
 };
-
-// --- Implementations ---
 
 class InMemoryLabDetails : public LabDetails
 {
@@ -398,9 +413,7 @@ public:
     vector<TeachingAssistant>& GetAllTAs() override { return tas; }
 };
 
-// ==========================================
-// ROLES
-// ==========================================
+// Actor Roles
 
 class Person
 {
@@ -441,16 +454,14 @@ private:
 
     void GenerateCompleteWeeklySchedule(LabDetails *lDetails)
     {
-        cout << "\n========================================\n";
-        cout << "    COMPLETE LAB SCHEDULE - ENTIRE WEEK\n";
-        cout << "========================================\n\n";
+        cout << "\nComplete Lab Schedule - Entire Week\n";
+        cout << string(40, '=') << "\n";
 
         vector<CourseLaboratory> &labs = lDetails->GetAllLabs();
 
         if (labs.empty())
         {
             cout << "No labs scheduled for the week.\n";
-            cout << "\n========================================\n";
             return;
         }
 
@@ -467,85 +478,53 @@ private:
         vector<string> dayOrder = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
         set<string> processedDays;
 
-        // 1. Print Standard Days
         for (const string &day : dayOrder)
         {
             if (scheduleByDay.find(day) != scheduleByDay.end())
             {
                 processedDays.insert(day);
-                cout << "\n=== " << day << " ===\n";
-                cout << string(50, '-') << "\n";
-
+                cout << "\n--- " << day << " ---\n";
                 for (const auto &entry : scheduleByDay[day])
                 {
                     CourseLaboratory *lab = entry.first;
                     ClassSection *sec = entry.second;
 
-                    cout << "\nLab ID: " << lab->GetLabId() << " | Course: " << lab->GetCourseCode() << "\n";
+                    cout << "Lab ID: " << lab->GetLabId() << " | Course: " << lab->GetCourseCode() << "\n";
                     cout << "  Section: " << sec->GetSectionName() << "\n";
                     cout << "  Time: " << sec->GetScheduleTime().GetStartTime() << " - " << sec->GetScheduleTime().GetEndTime() << "\n";
                     cout << "  Venue: " << (sec->GetBuilding() ? sec->GetBuilding()->GetName() : "N/A")
                          << " - Room " << (sec->GetRoom() ? sec->GetRoom()->GetRoomNumber() : "N/A") << "\n";
                     cout << "  Instructor: " << (sec->GetTeacher() ? sec->GetTeacher()->GetName() : "Unassigned") << "\n";
-                    cout << "  TAs: ";
-                    if (sec->GetAssistants().empty()) cout << "None assigned\n";
-                    else
-                    {
-                        const auto &tas = sec->GetAssistants();
-                        for (size_t i = 0; i < tas.size(); i++)
-                        {
-                            cout << (tas[i] ? tas[i]->GetName() : "Unknown");
-                            if (i < tas.size() - 1) cout << ", ";
-                        }
-                        cout << "\n";
-                    }
                 }
             }
         }
 
-        // 2. Print Non-Standard Days (Dates that don't contain "Monday" etc.)
         for (const auto& pair : scheduleByDay) {
             if (processedDays.find(pair.first) == processedDays.end()) {
-                cout << "\n=== " << pair.first << " ===\n";
-                cout << string(50, '-') << "\n";
+                cout << "\n--- " << pair.first << " ---\n";
                 for (const auto &entry : pair.second)
                 {
                     CourseLaboratory *lab = entry.first;
                     ClassSection *sec = entry.second;
-
-                    cout << "\nLab ID: " << lab->GetLabId() << " | Course: " << lab->GetCourseCode() << "\n";
+                    cout << "Lab ID: " << lab->GetLabId() << " | Course: " << lab->GetCourseCode() << "\n";
                     cout << "  Section: " << sec->GetSectionName() << "\n";
                     cout << "  Time: " << sec->GetScheduleTime().GetStartTime() << " - " << sec->GetScheduleTime().GetEndTime() << "\n";
                     cout << "  Venue: " << (sec->GetBuilding() ? sec->GetBuilding()->GetName() : "N/A")
                          << " - Room " << (sec->GetRoom() ? sec->GetRoom()->GetRoomNumber() : "N/A") << "\n";
                     cout << "  Instructor: " << (sec->GetTeacher() ? sec->GetTeacher()->GetName() : "Unassigned") << "\n";
-                    cout << "  TAs: ";
-                    if (sec->GetAssistants().empty()) cout << "None assigned\n";
-                    else
-                    {
-                        const auto &tas = sec->GetAssistants();
-                        for (size_t i = 0; i < tas.size(); i++)
-                        {
-                            cout << (tas[i] ? tas[i]->GetName() : "Unknown");
-                            if (i < tas.size() - 1) cout << ", ";
-                        }
-                        cout << "\n";
-                    }
                 }
             }
         }
-
-        cout << "\n========================================\n";
+        cout << string(40, '=') << "\n";
     }
 
     void GenerateWeeklyTimeSheetReport(LabDetails *lDetails, WorkLogDetails *logDetails)
     {
-        cout << "\n========================================\n";
-        cout << "    FILLED TIME SHEETS - WEEKLY REPORT\n";
-        cout << "========================================\n\n";
+        cout << "\nFilled Time Sheets Report\n";
+        cout << string(40, '=') << "\n";
 
         string weekInput;
-        cout << "Enter week identifier (e.g., 'Week1', 'Week2', or 'all' for all weeks): ";
+        cout << "Enter week identifier (e.g., 'Week1', 'all'): ";
         InputOutput::SafeReadString(weekInput);
 
         vector<WorkLog> &logs = logDetails->GetAllEntries();
@@ -558,102 +537,36 @@ private:
 
         if (filteredLogs.empty())
         {
-            cout << "No time sheet entries found for " << weekInput << ".\n";
+            cout << "No entries found.\n";
             return;
         }
 
-        cout << "\nTime Sheet Entries for " << weekInput << ":\n";
-        cout << string(80, '-') << "\n";
-        cout << left << setw(8) << "Lab ID" << setw(15) << "Course Code" << setw(12) << "Section"
-             << setw(15) << "Date" << setw(12) << "Start Time" << setw(12) << "End Time"
-             << setw(10) << "Status" << setw(15) << "Instructor" << endl;
-        cout << string(80, '-') << "\n";
-
+        cout << left << setw(8) << "LabID" << setw(12) << "Section" << setw(15) << "Date" << "Status" << endl;
         for (const auto &log : filteredLogs)
         {
-            CourseLaboratory *lab = lDetails->FindLab(log.GetLabId());
-            string courseCode = lab ? lab->GetCourseCode() : "N/A";
-            ClassSection *sec = nullptr;
-            string instructorName = "N/A";
-            if (lab)
-            {
-                sec = lab->FindSection(log.GetSectionName());
-                if (sec && sec->GetTeacher()) instructorName = sec->GetTeacher()->GetName();
-            }
-
-            cout << left << setw(8) << log.GetLabId()
-                 << setw(15) << courseCode
-                 << setw(12) << log.GetSectionName()
+            cout << left << setw(8) << log.GetLabId() << setw(12) << log.GetSectionName()
                  << setw(15) << log.GetActualTiming().GetDate()
-                 << setw(12) << (log.GetIsLeave() ? "N/A" : log.GetActualTiming().GetStartTime())
-                 << setw(12) << (log.GetIsLeave() ? "N/A" : log.GetActualTiming().GetEndTime())
-                 << setw(10) << (log.GetIsLeave() ? "LEAVE" : "PRESENT")
-                 << setw(15) << instructorName << endl;
+                 << (log.GetIsLeave() ? "LEAVE" : "PRESENT") << endl;
         }
-
-        int presentCount = 0;
-        int leaveCount = 0;
-        float totalHours = 0.0f;
-
-        for (const auto &log : filteredLogs)
-        {
-            if (log.GetIsLeave()) leaveCount++;
-            else
-            {
-                presentCount++;
-                totalHours += CalculateHours(log.GetActualTiming().GetStartTime(), log.GetActualTiming().GetEndTime());
-            }
-        }
-
-        cout << "\n" << string(80, '-') << "\n";
-        cout << "SUMMARY:\n";
-        cout << "  Total Entries: " << filteredLogs.size() << "\n";
-        cout << "  Present: " << presentCount << "\n";
-        cout << "  Leaves: " << leaveCount << "\n";
-        cout << "  Total Contact Hours: " << fixed << setprecision(2) << totalHours << " hours\n";
-        cout << "\n========================================\n";
     }
 
     void GenerateLabSpecificTimeSheet(LabDetails *lDetails, WorkLogDetails *logDetails)
     {
         int labId;
         cout << "Enter Lab ID: "; InputOutput::SafeReadInt(labId);
-        CourseLaboratory *lab = lDetails->FindLab(labId);
-        if (!lab) { cout << "Error: Lab ID not found.\n"; return; }
-
-        cout << "\nLab ID: " << lab->GetLabId() << " | Course: " << lab->GetCourseCode() << "\n";
-        cout << string(80, '-') << "\n\n";
+        if (!lDetails->FindLab(labId)) { cout << "Error: Lab ID not found.\n"; return; }
 
         vector<WorkLog> &logs = logDetails->GetAllEntries();
         vector<WorkLog> labLogs;
         for (const auto &log : logs) if (log.GetLabId() == labId) labLogs.push_back(log);
 
-        if (labLogs.empty()) { cout << "No time sheet entries found for this lab.\n"; return; }
+        if (labLogs.empty()) { cout << "No logs for this lab.\n"; return; }
 
-        cout << "ALL SESSIONS TIME SHEET:\n";
-        cout << string(80, '-') << "\n";
-        cout << left << setw(12) << "Section" << setw(15) << "Date" << setw(12) << "Start" << setw(12) << "End" << setw(10) << "Status" << endl;
-        cout << string(80, '-') << "\n";
-
-        float totalContactHours = 0.0f;
-        int totalLeaves = 0, totalPresent = 0;
-
+        cout << "Logs for Lab " << labId << ":\n";
         for (const auto &log : labLogs)
         {
-            float hours = 0.0f;
-            if (!log.GetIsLeave())
-            {
-                hours = CalculateHours(log.GetActualTiming().GetStartTime(), log.GetActualTiming().GetEndTime());
-                totalContactHours += hours;
-                totalPresent++;
-            }
-            else totalLeaves++;
-
-            cout << left << setw(12) << log.GetSectionName()
-                 << setw(15) << log.GetActualTiming().GetDate()
-                 << setw(12) << (log.GetIsLeave() ? "N/A" : log.GetActualTiming().GetStartTime())
-                 << setw(12) << (log.GetIsLeave() ? "N/A" : log.GetActualTiming().GetEndTime())
-                 << setw(10) << (log.GetIsLeave() ? "LEAVE" : "PRESENT") << endl;
+            cout << "Sec: " << log.GetSectionName() << " | Date: " << log.GetActualTiming().GetDate() 
+                 << " | " << (log.GetIsLeave() ? "LEAVE" : "PRESENT") << endl;
         }
     }
 
@@ -665,11 +578,7 @@ public:
         while (true)
         {
             cout << "\n--- HOD DASHBOARD ---\n";
-            cout << "1. Complete Lab Schedule for Entire Week\n";
-            cout << "2. Filled Time Sheet for All Labs in a Given Week\n";
-            cout << "3. Time Sheet for All Sessions of a Particular Lab\n";
-            cout << "4. Logout\n";
-            cout << "Select: ";
+            cout << "1. Weekly Schedule\n2. Weekly Time Sheet Report\n3. Lab Specific Report\n4. Logout\nSelect: ";
             InputOutput::SafeReadInt(choice);
             if (choice == 1) GenerateCompleteWeeklySchedule(lDetails);
             else if (choice == 2) GenerateWeeklyTimeSheetReport(lDetails, wDetails);
@@ -750,17 +659,18 @@ private:
 public:
     AcademicOfficer() : Person("Academic Officer") {}
 
-    // --- Dynamic Infrastructure Methods ---
     void AddBuilding(VenueDetails *vDetails) {
         int id; string name;
         do {
             cout << "Enter Building ID (>0): "; InputOutput::SafeReadInt(id);
+            if (!DataValidator::IsValidID(id)) cout << "Invalid ID. Must be > 0.\n";
         } while (!DataValidator::IsValidID(id));
         
         if(vDetails->FindBuilding(id)) { cout << "ID exists.\n"; return; }
         
         do {
             cout << "Enter Building Name: "; InputOutput::SafeReadString(name);
+            if (!DataValidator::IsNonEmptyString(name)) cout << "Name cannot be empty.\n";
         } while (!DataValidator::IsNonEmptyString(name));
         
         vDetails->AddBuilding(CampusBlock(id, name));
@@ -771,16 +681,19 @@ public:
         int id, bId; string num;
         do {
             cout << "Enter Room ID (>0): "; InputOutput::SafeReadInt(id);
+            if (!DataValidator::IsValidID(id)) cout << "Invalid ID. Must be > 0.\n";
         } while (!DataValidator::IsValidID(id));
         
         if(vDetails->FindRoom(id)) { cout << "ID exists.\n"; return; }
         
         do {
-            cout << "Enter Room Number/Name (e.g., 101, A-102): "; InputOutput::SafeReadString(num);
+            cout << "Enter Room Number/Name: "; InputOutput::SafeReadString(num);
+            if (!DataValidator::IsNonEmptyString(num)) cout << "Cannot be empty.\n";
         } while (!DataValidator::IsNonEmptyString(num));
         
         do {
             cout << "Enter Building ID (>0): "; InputOutput::SafeReadInt(bId);
+            if (!DataValidator::IsValidID(bId)) cout << "Invalid ID.\n";
         } while (!DataValidator::IsValidID(bId));
         
         CampusBlock* b = vDetails->FindBuilding(bId);
@@ -794,12 +707,14 @@ public:
         int id; string name;
         do {
             cout << "Enter Teacher ID (>0): "; InputOutput::SafeReadInt(id);
+            if (!DataValidator::IsValidID(id)) cout << "Invalid ID.\n";
         } while (!DataValidator::IsValidID(id));
         
         if(fDetails->FindTeacher(id)) { cout << "ID exists.\n"; return; }
         
         do {
             cout << "Enter Name: "; InputOutput::SafeReadString(name);
+            if (!DataValidator::IsNonEmptyString(name)) cout << "Cannot be empty.\n";
         } while (!DataValidator::IsNonEmptyString(name));
         
         fDetails->AddTeacher(UniversityTeacher(id, name));
@@ -810,19 +725,19 @@ public:
         int id; string name;
         do {
             cout << "Enter TA ID (>0): "; InputOutput::SafeReadInt(id);
+            if (!DataValidator::IsValidID(id)) cout << "Invalid ID.\n";
         } while (!DataValidator::IsValidID(id));
         
         if(fDetails->FindTA(id)) { cout << "ID exists.\n"; return; }
         
         do {
             cout << "Enter Name: "; InputOutput::SafeReadString(name);
+            if (!DataValidator::IsNonEmptyString(name)) cout << "Cannot be empty.\n";
         } while (!DataValidator::IsNonEmptyString(name));
         
         fDetails->AddTA(TeachingAssistant(id, name));
         cout << "TA Added.\n";
     }
-
-    // --- Infrastructure Views ---
 
     void ViewInfrastructure(VenueDetails *v, FacultyDetails *f) {
         cout << "\n--- VIEW INFRASTRUCTURE ---\n";
@@ -852,11 +767,9 @@ public:
         }
     }
 
-    // --- Core Methods ---
-
     void ViewCompleteLabDetails(LabDetails *lDetails)
     {
-        cout << "\n--- COMPLETE LAB SCHEDULING INFORMATION ---\n";
+        cout << "\nComplete Lab Schedule\n";
         vector<CourseLaboratory> &labs = lDetails->GetAllLabs();
         if (labs.empty()) { cout << "No labs scheduled.\n"; return; }
 
@@ -878,35 +791,45 @@ public:
         int labId, teacherId, bId, rId, taCount;
         string code, secName, day, s, e;
 
-        do { cout << "Lab ID: "; InputOutput::SafeReadInt(labId); } while(!DataValidator::IsValidID(labId));
-        do { cout << "Course Code: "; InputOutput::SafeReadString(code); } while(!DataValidator::IsNonEmptyString(code));
-        do { cout << "Section Name: "; InputOutput::SafeReadString(secName); } while(!DataValidator::IsNonEmptyString(secName));
+        do { cout << "Lab ID: "; InputOutput::SafeReadInt(labId); if (!DataValidator::IsValidID(labId)) cout << "Invalid ID.\n"; } while(!DataValidator::IsValidID(labId));
+        do { cout << "Course Code: "; InputOutput::SafeReadString(code); if (!DataValidator::IsNonEmptyString(code)) cout << "Cannot be empty.\n"; } while(!DataValidator::IsNonEmptyString(code));
+        do { cout << "Section Name: "; InputOutput::SafeReadString(secName); if (!DataValidator::IsNonEmptyString(secName)) cout << "Cannot be empty.\n"; } while(!DataValidator::IsNonEmptyString(secName));
         
-        do { cout << "Teacher ID: "; InputOutput::SafeReadInt(teacherId); } while(!DataValidator::IsValidID(teacherId));
-        do { cout << "Building ID: "; InputOutput::SafeReadInt(bId); } while(!DataValidator::IsValidID(bId));
-        do { cout << "Room ID: "; InputOutput::SafeReadInt(rId); } while(!DataValidator::IsValidID(rId));
-        
-        do { cout << "Day (e.g. Monday): "; InputOutput::SafeReadString(day); } while(!DataValidator::IsNonEmptyString(day));
-        
-        // Strict Validation Loops restored
         do {
+            cout << "Teacher ID: "; InputOutput::SafeReadInt(teacherId);
+            if (!fDetails->FindTeacher(teacherId)) cout << "Teacher ID not found.\n";
+        } while(!fDetails->FindTeacher(teacherId));
+
+        do {
+            cout << "Building ID: "; InputOutput::SafeReadInt(bId);
+            if (!vDetails->FindBuilding(bId)) cout << "Building ID not found.\n";
+        } while(!vDetails->FindBuilding(bId));
+
+        do {
+            cout << "Room ID: "; InputOutput::SafeReadInt(rId);
+            LectureHall* r = vDetails->FindRoom(rId);
+            if (!r) cout << "Room ID not found.\n";
+            else if (r->GetBuildingId() != bId) { cout << "Room does not belong to the selected building.\n"; r = nullptr; }
+            if (!r) continue; else break;
+        } while(true);
+        
+        do { cout << "Day/Date (YYYY-MM-DD or Weekday): "; InputOutput::SafeReadString(day); if (!DataValidator::IsNonEmptyString(day)) cout << "Cannot be empty.\n"; } while(!DataValidator::IsNonEmptyString(day));
+        
+        while(true) {
             cout << "Start (HH:MM): "; InputOutput::SafeReadString(s);
-            if(!DataValidator::IsValidTime(s)) cout << "Invalid time format.\n";
-        } while(!DataValidator::IsValidTime(s));
-
-        do {
             cout << "End (HH:MM): "; InputOutput::SafeReadString(e);
-            if(!DataValidator::IsValidTime(e)) cout << "Invalid time format.\n";
-        } while(!DataValidator::IsValidTime(e));
-
-        if (!DataValidator::IsStartBeforeEnd(s, e)) { cout << "Error: Start must be before End.\n"; return; }
+            if (!DataValidator::IsValidTime(s) || !DataValidator::IsValidTime(e)) {
+                cout << "Invalid time format. Use HH:MM.\n";
+            } else if (!DataValidator::IsStartBeforeEnd(s, e)) {
+                cout << "Start time must be strictly before End time.\n";
+            } else {
+                break;
+            }
+        }
 
         UniversityTeacher *t = fDetails->FindTeacher(teacherId);
         CampusBlock *b = vDetails->FindBuilding(bId);
         LectureHall *r = vDetails->FindRoom(rId);
-
-        if (!t || !b || !r) { cout << "Invalid Teacher/Building/Room ID.\n"; return; }
-        if (r->GetBuildingId() != bId) { cout << "Room not in Building.\n"; return; }
 
         ClassSection sec;
         sec.SetDetails(secName, t, b, r);
@@ -917,6 +840,7 @@ public:
             int taId; cout << "TA ID: "; InputOutput::SafeReadInt(taId);
             TeachingAssistant* ta = fDetails->FindTA(taId);
             if(ta) sec.AddTA(ta);
+            else cout << "TA ID " << taId << " not found, skipping.\n";
         }
 
         CourseLaboratory *lab = lDetails->FindLab(labId);
@@ -938,7 +862,7 @@ public:
         vector<MakeupLabRequest> requests = ReadMakeupRequestsFromBinary(lDetails);
         if (requests.empty()) { cout << "\nNo makeup requests.\n"; return; }
 
-        cout << "\n--- MAKEUP REQUESTS ---\n";
+        cout << "\nMakeup Requests\n";
         for (const auto &req : requests)
         {
             int labId = (req.GetLab() ? req.GetLab()->GetLabId() : -1);
@@ -951,7 +875,7 @@ public:
         vector<MakeupLabRequest> requests = ReadMakeupRequestsFromBinary(lDetails);
         if (requests.empty()) { cout << "\nNo makeup requests.\n"; return; }
 
-        cout << "\n--- AVAILABLE MAKEUP REQUESTS ---\n";
+        cout << "\nAvailable Makeup Requests\n";
         for (size_t i = 0; i < requests.size(); i++)
         {
             int labId = (requests[i].GetLab() ? requests[i].GetLab()->GetLabId() : -1);
@@ -964,15 +888,28 @@ public:
         MakeupLabRequest selected = requests[choice - 1];
 
         int teacherId, bId, rId, taCount;
-        do { cout << "Instructor ID: "; InputOutput::SafeReadInt(teacherId); } while(!DataValidator::IsValidID(teacherId));
-        do { cout << "Building ID: "; InputOutput::SafeReadInt(bId); } while(!DataValidator::IsValidID(bId));
-        do { cout << "Room ID: "; InputOutput::SafeReadInt(rId); } while(!DataValidator::IsValidID(rId));
+        
+        do {
+            cout << "Instructor ID: "; InputOutput::SafeReadInt(teacherId);
+            if(!fDetails->FindTeacher(teacherId)) cout << "Teacher not found.\n";
+        } while(!fDetails->FindTeacher(teacherId));
+
+        do {
+            cout << "Building ID: "; InputOutput::SafeReadInt(bId);
+            if(!vDetails->FindBuilding(bId)) cout << "Building not found.\n";
+        } while(!vDetails->FindBuilding(bId));
+
+        do {
+            cout << "Room ID: "; InputOutput::SafeReadInt(rId);
+            LectureHall* r = vDetails->FindRoom(rId);
+            if(!r) cout << "Room not found.\n";
+            else if (r->GetBuildingId() != bId) { cout << "Room not in building.\n"; r = nullptr; }
+            if(r) break;
+        } while(true);
 
         UniversityTeacher *t = fDetails->FindTeacher(teacherId);
         CampusBlock *b = vDetails->FindBuilding(bId);
         LectureHall *r = vDetails->FindRoom(rId);
-
-        if (!t || !b || !r) { cout << "Invalid IDs.\n"; return; }
 
         ClassSection makeupSec;
         makeupSec.SetDetails(selected.GetSectionName() + "_MAKEUP", t, b, r);
@@ -1056,12 +993,7 @@ private:
 
     void RequestMakeupLab(LabDetails *lDetails, int labId, const string &secName, const string &date, const string &s, const string &e)
     {
-        CourseLaboratory *l = lDetails->FindLab(labId);
-        if (!l) { cout << "Error: Lab not found.\n"; return; }
-        ClassSection *sec = l->FindSection(secName);
-        if (!sec) { cout << "Error: Section not found.\n"; return; }
-
-        MakeupLabRequest request(l, secName, date, s, e);
+        MakeupLabRequest request(lDetails->FindLab(labId), secName, date, s, e);
         SaveMakeupRequestToBinary(request);
         cout << "Request Submitted.\n";
     }
@@ -1078,26 +1010,33 @@ public:
             if (choice == 1)
             {
                 int id; string sec, date, s, e;
-                do { cout << "Lab ID: "; InputOutput::SafeReadInt(id); } while (!DataValidator::IsValidID(id));
-                do { cout << "Section: "; InputOutput::SafeReadString(sec); } while(!DataValidator::IsNonEmptyString(sec));
+                CourseLaboratory* l = nullptr;
+                ClassSection* section = nullptr;
+
+                do {
+                    cout << "Lab ID: "; InputOutput::SafeReadInt(id);
+                    l = lDetails->FindLab(id);
+                    if (!l) cout << "Error: Lab ID not found. Can only request makeup for scheduled labs.\n";
+                } while (!l);
+
+                do {
+                    cout << "Section: "; InputOutput::SafeReadString(sec);
+                    section = l->FindSection(sec);
+                    if (!section) cout << "Error: Section not found in this Lab.\n";
+                } while (!section);
                 
                 do { 
                     cout << "Date (YYYY-MM-DD): "; InputOutput::SafeReadString(date); 
-                    if (!DataValidator::IsValidDate(date)) cout << "Invalid Date.\n";
+                    if (!DataValidator::IsValidDate(date)) cout << "Invalid Date Format or Value (Use YYYY-MM-DD).\n";
                 } while(!DataValidator::IsValidDate(date));
 
-                // Validation loops
-                do {
+                while(true) {
                     cout << "Start (HH:MM): "; InputOutput::SafeReadString(s);
-                    if(!DataValidator::IsValidTime(s)) cout << "Invalid time format.\n";
-                } while(!DataValidator::IsValidTime(s));
-
-                do {
                     cout << "End (HH:MM): "; InputOutput::SafeReadString(e);
-                    if(!DataValidator::IsValidTime(e)) cout << "Invalid time format.\n";
-                } while(!DataValidator::IsValidTime(e));
-
-                if (!DataValidator::IsStartBeforeEnd(s, e)) { cout << "Error: Start must be before End.\n"; continue; }
+                    if (!DataValidator::IsValidTime(s) || !DataValidator::IsValidTime(e)) cout << "Invalid time format.\n";
+                    else if (!DataValidator::IsStartBeforeEnd(s, e)) cout << "Start time must be strictly before End time.\n";
+                    else break;
+                }
 
                 RequestMakeupLab(lDetails, id, sec, date, s, e);
             }
@@ -1135,7 +1074,6 @@ private:
 
     void FillTimeSheet(LabDetails *lDetails, WorkLogDetails *logDetails, int labId, const string &secName, const string &d, const string &s, const string &e, bool leave)
     {
-        if (!IsLabSectionScheduled(lDetails, labId, secName)) { cout << "Error: Not scheduled.\n"; return; }
         WorkLog entry;
         entry.SetLabId(labId); entry.SetSectionName(secName);
         entry.GetActualTiming().Set(d, s, e); entry.SetIsLeave(leave);
@@ -1156,28 +1094,36 @@ public:
             else if (choice == 2)
             {
                 int id, leave; string sec, d, s, e;
-                do { cout << "Lab ID: "; InputOutput::SafeReadInt(id); } while (!DataValidator::IsValidID(id));
-                do { cout << "Section: "; InputOutput::SafeReadString(sec); } while(!DataValidator::IsNonEmptyString(sec));
+                CourseLaboratory* l = nullptr;
+                ClassSection* section = nullptr;
+
+                do {
+                    cout << "Lab ID: "; InputOutput::SafeReadInt(id);
+                    l = lDetails->FindLab(id);
+                    if (!l) cout << "Error: Lab ID not found.\n";
+                } while(!l);
+
+                do {
+                    cout << "Section: "; InputOutput::SafeReadString(sec);
+                    section = l->FindSection(sec);
+                    if (!section) cout << "Error: Section not found.\n";
+                } while(!section);
+
                 do { 
                     cout << "Date (YYYY-MM-DD): "; InputOutput::SafeReadString(d); 
-                    if(!DataValidator::IsValidDate(d)) cout << "Invalid Date.\n";
+                    if(!DataValidator::IsValidDate(d)) cout << "Invalid Date Format or Value.\n";
                 } while(!DataValidator::IsValidDate(d));
                 
                 cout << "Leave? (1/0): "; InputOutput::SafeReadInt(leave);
                 
                 if (!leave) {
-                    // Validation loops
-                    do {
+                    while(true) {
                         cout << "Start (HH:MM): "; InputOutput::SafeReadString(s);
-                        if(!DataValidator::IsValidTime(s)) cout << "Invalid time format.\n";
-                    } while(!DataValidator::IsValidTime(s));
-
-                    do {
                         cout << "End (HH:MM): "; InputOutput::SafeReadString(e);
-                        if(!DataValidator::IsValidTime(e)) cout << "Invalid time format.\n";
-                    } while(!DataValidator::IsValidTime(e));
-
-                    if (!DataValidator::IsStartBeforeEnd(s, e)) { cout << "Error: Start must be before End.\n"; continue; }
+                        if (!DataValidator::IsValidTime(s) || !DataValidator::IsValidTime(e)) cout << "Invalid time format.\n";
+                        else if (!DataValidator::IsStartBeforeEnd(s, e)) cout << "Start time must be strictly before End time.\n";
+                        else break;
+                    }
                 }
                 FillTimeSheet(lDetails, logDetails, id, sec, d, s, e, leave);
             }
@@ -1185,11 +1131,6 @@ public:
         }
     }
 };
-
-
-// ==========================================
-// STORAGE MANAGER (The Key Dynamic Part)
-// ==========================================
 
 class StorageManager
 {
@@ -1224,7 +1165,6 @@ public:
 
     void Save()
     {
-        // 1. Save Venue Data
         ofstream vOut("venue.dat", ios::binary);
         if (vOut.is_open()) {
             auto& bldgs = venueDetails->GetAllBuildings();
@@ -1243,13 +1183,12 @@ public:
                 int id = r.GetId();
                 int bId = r.GetBuildingId(); 
                 vOut.write(reinterpret_cast<const char*>(&id), sizeof(int));
-                WriteString(vOut, r.GetRoomNumber()); // Now writing string
+                WriteString(vOut, r.GetRoomNumber());
                 vOut.write(reinterpret_cast<const char*>(&bId), sizeof(int));
             }
             vOut.close();
         }
 
-        // 2. Save Faculty Data
         ofstream fOut("faculty.dat", ios::binary);
         if(fOut.is_open()) {
             auto& teachers = facultyDetails->GetAllTeachers();
@@ -1272,7 +1211,6 @@ public:
             fOut.close();
         }
 
-        // 3. Save Schedule (Labs)
         ofstream sOut("schedule.dat", ios::binary);
         if(sOut.is_open()) {
             auto& labs = labDetails->GetAllLabs();
@@ -1313,7 +1251,6 @@ public:
             sOut.close();
         }
         
-        // 4. Save Logs
         ofstream lOut("logs.dat", ios::binary);
         if(lOut.is_open()) {
              auto& logs = logDetails->GetAllEntries();
@@ -1337,7 +1274,6 @@ public:
 
     void Load()
     {
-        // 1. Load Venue Data
         ifstream vIn("venue.dat", ios::binary);
         if(vIn.is_open()) {
             int bCount; vIn.read(reinterpret_cast<char*>(&bCount), sizeof(int));
@@ -1351,7 +1287,7 @@ public:
             for(int i=0; i<rCount && !vIn.eof(); i++) {
                 int id, bId;
                 vIn.read(reinterpret_cast<char*>(&id), sizeof(int));
-                string num = ReadString(vIn); // Reading string now
+                string num = ReadString(vIn); 
                 vIn.read(reinterpret_cast<char*>(&bId), sizeof(int));
                 
                 CampusBlock* b = venueDetails->FindBuilding(bId);
@@ -1360,7 +1296,6 @@ public:
             vIn.close();
         }
 
-        // 2. Load Faculty Data
         ifstream fIn("faculty.dat", ios::binary);
         if(fIn.is_open()) {
             int tCount; fIn.read(reinterpret_cast<char*>(&tCount), sizeof(int));
@@ -1378,7 +1313,6 @@ public:
             fIn.close();
         }
 
-        // 3. Load Schedule
         ifstream sIn("schedule.dat", ios::binary);
         if(sIn.is_open()) {
             int lCount; sIn.read(reinterpret_cast<char*>(&lCount), sizeof(int));
@@ -1420,7 +1354,6 @@ public:
             sIn.close();
         }
         
-        // 4. Load Logs
         ifstream lIn("logs.dat", ios::binary);
         if(lIn.is_open()) {
             int count; lIn.read(reinterpret_cast<char*>(&count), sizeof(int));
@@ -1445,10 +1378,6 @@ public:
     }
 };
 
-// ==========================================
-// MAIN
-// ==========================================
-
 int main()
 {
     InMemoryLabDetails labDetails;
@@ -1456,7 +1385,6 @@ int main()
     InMemoryFacultyDetails facultyDetails;
     InMemoryWorkLogDetails logDetails;
 
-    // NO SEED DATA - Everything loads from file or created via menu
     StorageManager storage(&labDetails, &venueDetails, &facultyDetails, &logDetails);
     storage.Load();
 
