@@ -2,19 +2,19 @@
 <!--Detailed report on module MakeupLabRequest-->
 <CCCC_Project>
 <module_summary>
-<lines_of_code value="24" level="0" />
+<lines_of_code value="23" level="0" />
 <lines_of_code_per_member_function value="******" level="0" />
-<McCabes_cyclomatic_complexity value="0" level="0" />
-<McCabes_cyclomatic_complexity_per_member_function value="******" level="0" />
+<McCabes_cyclomatic_complexity value="5" level="0" />
+<McCabes_cyclomatic_complexity_per_member_function value="******" level="2" />
 <lines_of_code value="0" level="0" />
 <lines_of_code_per_member_function value="********" level="0" />
 <lines_of_code_per_line_of_comment value="******" level="2" />
-<McCabes_cyclomatic_complexity_per_line_of_comment value="------" level="0" />
-<weighted_methods_per_class_unity value="2" level="0" />
-<weighted_methods_per_class_visibility value="2" level="0" />
+<McCabes_cyclomatic_complexity_per_line_of_comment value="******" level="0" />
+<weighted_methods_per_class_unity value="12" level="0" />
+<weighted_methods_per_class_visibility value="12" level="0" />
 <depth_of_inheritance_tree value="0" level="0" />
 <number_of_children value="0" level="0" />
-<coupling_between_objects value="1" level="0" />
+<coupling_between_objects value="2" level="0" />
 <IF4 value="0" level="0" />
 <IF4_per_member_function value="********" level="0" />
 <IF4_visible value="0" level="0" />
@@ -24,15 +24,8 @@
 </module_summary>
 <module_detail>
 <description>definition</description>
-<source_reference file="sda.cpp" line="204" />
-<lines_of_code value="9" level="0" />
-<McCabes_cyclomatic_complexity value="0" level="0" />
-<lines_of_comment value="0" level="0" />
-<lines_of_code_per_line_of_comment value="------" level="0" />
-<McCabes_cyclomatic_complexity_per_line_of_comment value="------" level="0" />
-<description>definition</description>
-<source_reference file="sda.cpp" line="204" />
-<lines_of_code value="9" level="0" />
+<source_reference file="sda.cpp" line="399" />
+<lines_of_code value="10" level="0" />
 <McCabes_cyclomatic_complexity value="0" level="0" />
 <lines_of_comment value="0" level="0" />
 <lines_of_code_per_line_of_comment value="------" level="0" />
@@ -40,14 +33,82 @@
 </module_detail>
 <procedural_detail>
 <member_function>
+<name>GetLab()</name>
+<extent>
+<description>definition</description>
+<source_reference file="sda.cpp" line="413" />
+</extent>
+<lines_of_code value="1" level="0" />
+<McCabes_cyclomatic_complexity value="1" level="0" />
+<lines_of_comment value="0" level="0" />
+<lines_of_code_per_line_of_comment value="------" level="0" />
+<McCabes_cyclomatic_complexity_per_line_of_comment value="------" level="0" />
+</member_function>
+<member_function>
+<name>GetRequestedDate()</name>
+<extent>
+<description>definition</description>
+<source_reference file="sda.cpp" line="417" />
+</extent>
+<lines_of_code value="1" level="0" />
+<McCabes_cyclomatic_complexity value="1" level="0" />
+<lines_of_comment value="0" level="0" />
+<lines_of_code_per_line_of_comment value="------" level="0" />
+<McCabes_cyclomatic_complexity_per_line_of_comment value="------" level="0" />
+</member_function>
+<member_function>
+<name>GetRequestedEndTime()</name>
+<extent>
+<description>definition</description>
+<source_reference file="sda.cpp" line="421" />
+</extent>
+<lines_of_code value="1" level="0" />
+<McCabes_cyclomatic_complexity value="1" level="0" />
+<lines_of_comment value="0" level="0" />
+<lines_of_code_per_line_of_comment value="------" level="0" />
+<McCabes_cyclomatic_complexity_per_line_of_comment value="------" level="0" />
+</member_function>
+<member_function>
+<name>GetRequestedStartTime()</name>
+<extent>
+<description>definition</description>
+<source_reference file="sda.cpp" line="419" />
+</extent>
+<lines_of_code value="1" level="0" />
+<McCabes_cyclomatic_complexity value="1" level="0" />
+<lines_of_comment value="0" level="0" />
+<lines_of_code_per_line_of_comment value="------" level="0" />
+<McCabes_cyclomatic_complexity_per_line_of_comment value="------" level="0" />
+</member_function>
+<member_function>
+<name>GetSectionName()</name>
+<extent>
+<description>definition</description>
+<source_reference file="sda.cpp" line="415" />
+</extent>
+<lines_of_code value="1" level="0" />
+<McCabes_cyclomatic_complexity value="1" level="0" />
+<lines_of_comment value="0" level="0" />
+<lines_of_code_per_line_of_comment value="------" level="0" />
+<McCabes_cyclomatic_complexity_per_line_of_comment value="------" level="0" />
+</member_function>
+<member_function>
 <name>MakeupLabRequest()</name>
 <extent>
 <description>definition</description>
-<source_reference file="sda.cpp" line="213" />
+<source_reference file="sda.cpp" line="409" />
 </extent>
+<lines_of_code value="1" level="0" />
+<McCabes_cyclomatic_complexity value="0" level="0" />
+<lines_of_comment value="0" level="0" />
+<lines_of_code_per_line_of_comment value="------" level="0" />
+<McCabes_cyclomatic_complexity_per_line_of_comment value="------" level="0" />
+</member_function>
+<member_function>
+<name>MakeupLabRequest(CourseLaboratory *,const string &amp;,const string &amp;,const string &amp;,const string &amp;)</name>
 <extent>
 <description>definition</description>
-<source_reference file="sda.cpp" line="213" />
+<source_reference file="sda.cpp" line="410" />
 </extent>
 <lines_of_code value="2" level="0" />
 <McCabes_cyclomatic_complexity value="0" level="0" />
@@ -56,16 +117,60 @@
 <McCabes_cyclomatic_complexity_per_line_of_comment value="------" level="0" />
 </member_function>
 <member_function>
-<name>MakeupLabRequest(int,const string &amp;,const string &amp;,const string &amp;,const string &amp;)</name>
+<name>SetLab(CourseLaboratory *)</name>
 <extent>
 <description>definition</description>
-<source_reference file="sda.cpp" line="214" />
+<source_reference file="sda.cpp" line="414" />
 </extent>
+<lines_of_code value="1" level="0" />
+<McCabes_cyclomatic_complexity value="0" level="0" />
+<lines_of_comment value="0" level="0" />
+<lines_of_code_per_line_of_comment value="------" level="0" />
+<McCabes_cyclomatic_complexity_per_line_of_comment value="------" level="0" />
+</member_function>
+<member_function>
+<name>SetRequestedDate(const string &amp;)</name>
 <extent>
 <description>definition</description>
-<source_reference file="sda.cpp" line="214" />
+<source_reference file="sda.cpp" line="418" />
 </extent>
-<lines_of_code value="4" level="0" />
+<lines_of_code value="1" level="0" />
+<McCabes_cyclomatic_complexity value="0" level="0" />
+<lines_of_comment value="0" level="0" />
+<lines_of_code_per_line_of_comment value="------" level="0" />
+<McCabes_cyclomatic_complexity_per_line_of_comment value="------" level="0" />
+</member_function>
+<member_function>
+<name>SetRequestedEndTime(const string &amp;)</name>
+<extent>
+<description>definition</description>
+<source_reference file="sda.cpp" line="422" />
+</extent>
+<lines_of_code value="1" level="0" />
+<McCabes_cyclomatic_complexity value="0" level="0" />
+<lines_of_comment value="0" level="0" />
+<lines_of_code_per_line_of_comment value="------" level="0" />
+<McCabes_cyclomatic_complexity_per_line_of_comment value="------" level="0" />
+</member_function>
+<member_function>
+<name>SetRequestedStartTime(const string &amp;)</name>
+<extent>
+<description>definition</description>
+<source_reference file="sda.cpp" line="420" />
+</extent>
+<lines_of_code value="1" level="0" />
+<McCabes_cyclomatic_complexity value="0" level="0" />
+<lines_of_comment value="0" level="0" />
+<lines_of_code_per_line_of_comment value="------" level="0" />
+<McCabes_cyclomatic_complexity_per_line_of_comment value="------" level="0" />
+</member_function>
+<member_function>
+<name>SetSectionName(const string &amp;)</name>
+<extent>
+<description>definition</description>
+<source_reference file="sda.cpp" line="416" />
+</extent>
+<lines_of_code value="1" level="0" />
 <McCabes_cyclomatic_complexity value="0" level="0" />
 <lines_of_comment value="0" level="0" />
 <lines_of_code_per_line_of_comment value="------" level="0" />
@@ -78,72 +183,71 @@
 <client_module>
 </client_module>
 <supplier_module>
+<name>CourseLaboratory</name>
+<visible>true</visible>
+<concrete>false</concrete>
+<extent>
+<description>has by reference</description>
+<source_reference file="sda.cpp" line="402" />
+</extent>
+<extent>
+<description>pass by reference</description>
+<source_reference file="sda.cpp" line="410" />
+</extent>
+<extent>
+<description>pass by reference</description>
+<source_reference file="sda.cpp" line="414" />
+</extent>
 <name>string</name>
 <visible>true</visible>
 <concrete>true</concrete>
 <extent>
 <description>has by value</description>
-<source_reference file="sda.cpp" line="208" />
+<source_reference file="sda.cpp" line="403" />
 </extent>
 <extent>
 <description>has by value</description>
-<source_reference file="sda.cpp" line="209" />
+<source_reference file="sda.cpp" line="404" />
 </extent>
 <extent>
 <description>has by value</description>
-<source_reference file="sda.cpp" line="210" />
+<source_reference file="sda.cpp" line="405" />
 </extent>
 <extent>
 <description>has by value</description>
-<source_reference file="sda.cpp" line="211" />
+<source_reference file="sda.cpp" line="406" />
 </extent>
 <extent>
 <description>pass by reference</description>
-<source_reference file="sda.cpp" line="214" />
+<source_reference file="sda.cpp" line="410" />
 </extent>
 <extent>
 <description>pass by reference</description>
-<source_reference file="sda.cpp" line="214" />
+<source_reference file="sda.cpp" line="410" />
 </extent>
 <extent>
 <description>pass by reference</description>
-<source_reference file="sda.cpp" line="214" />
+<source_reference file="sda.cpp" line="410" />
 </extent>
 <extent>
 <description>pass by reference</description>
-<source_reference file="sda.cpp" line="214" />
-</extent>
-<extent>
-<description>has by value</description>
-<source_reference file="sda.cpp" line="208" />
-</extent>
-<extent>
-<description>has by value</description>
-<source_reference file="sda.cpp" line="209" />
-</extent>
-<extent>
-<description>has by value</description>
-<source_reference file="sda.cpp" line="210" />
-</extent>
-<extent>
-<description>has by value</description>
-<source_reference file="sda.cpp" line="211" />
+<source_reference file="sda.cpp" line="410" />
 </extent>
 <extent>
 <description>pass by reference</description>
-<source_reference file="sda.cpp" line="214" />
+<source_reference file="sda.cpp" line="416" />
 </extent>
 <extent>
 <description>pass by reference</description>
-<source_reference file="sda.cpp" line="214" />
+<source_reference file="sda.cpp" line="418" />
 </extent>
 <extent>
 <description>pass by reference</description>
-<source_reference file="sda.cpp" line="214" />
+<source_reference file="sda.cpp" line="420" />
 </extent>
 <extent>
 <description>pass by reference</description>
-<source_reference file="sda.cpp" line="214" />
+<source_reference file="sda.cpp" line="422" />
 </extent>
 </supplier_module>
 </module>

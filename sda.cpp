@@ -1,7 +1,6 @@
 /**
- * @file UniversitySystem.cpp
- * @brief A comprehensive university management system handling scheduling,
- * infrastructure, and attendance.
+ * @file SDA.cpp
+ * @brief LAB Management System 
  * * This system supports multiple roles:
  * - HOD: View schedules and reports.
  * - Academic Officer: Manage infrastructure (Buildings, Rooms, Faculty) and schedule classes.

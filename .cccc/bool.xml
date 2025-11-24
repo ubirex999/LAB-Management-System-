@@ -35,11 +35,11 @@
 <concrete>true</concrete>
 <extent>
 <description>has by value</description>
-<source_reference file="sda.cpp" line="199" />
+<source_reference file="sda.cpp" line="384" />
 </extent>
 <extent>
-<description>has by value</description>
-<source_reference file="sda.cpp" line="199" />
+<description>pass by value</description>
+<source_reference file="sda.cpp" line="396" />
 </extent>
 </client_module>
 <supplier_module>

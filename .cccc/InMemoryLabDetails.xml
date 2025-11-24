@@ -2,13 +2,13 @@
 <!--Detailed report on module InMemoryLabDetails-->
 <CCCC_Project>
 <module_summary>
-<lines_of_code value="24" level="0" />
+<lines_of_code value="12" level="0" />
 <lines_of_code_per_member_function value="******" level="0" />
-<McCabes_cyclomatic_complexity value="4" level="0" />
+<McCabes_cyclomatic_complexity value="2" level="0" />
 <McCabes_cyclomatic_complexity_per_member_function value="******" level="2" />
-<lines_of_code value="2" level="0" />
+<lines_of_code value="1" level="0" />
 <lines_of_code_per_member_function value="********" level="2" />
-<lines_of_code_per_line_of_comment value="12.000" level="1" />
+<lines_of_code_per_line_of_comment value="------" level="0" />
 <McCabes_cyclomatic_complexity_per_line_of_comment value="------" level="0" />
 <weighted_methods_per_class_unity value="0" level="0" />
 <weighted_methods_per_class_visibility value="0" level="0" />
@@ -24,14 +24,7 @@
 </module_summary>
 <module_detail>
 <description>definition</description>
-<source_reference file="sda.cpp" line="256" />
-<lines_of_code value="12" level="0" />
-<McCabes_cyclomatic_complexity value="2" level="0" />
-<lines_of_comment value="1" level="0" />
-<lines_of_code_per_line_of_comment value="------" level="0" />
-<McCabes_cyclomatic_complexity_per_line_of_comment value="------" level="0" />
-<description>definition</description>
-<source_reference file="sda.cpp" line="256" />
+<source_reference file="sda.cpp" line="469" />
 <lines_of_code value="12" level="0" />
 <McCabes_cyclomatic_complexity value="2" level="0" />
 <lines_of_comment value="1" level="0" />
@@ -51,22 +44,14 @@
 <concrete>true</concrete>
 <extent>
 <description>inheritance</description>
-<source_reference file="sda.cpp" line="256" />
-</extent>
-<extent>
-<description>inheritance</description>
-<source_reference file="sda.cpp" line="256" />
+<source_reference file="sda.cpp" line="469" />
 </extent>
 <name>vector</name>
 <visible>true</visible>
 <concrete>true</concrete>
 <extent>
 <description>has by value</description>
-<source_reference file="sda.cpp" line="258" />
-</extent>
-<extent>
-<description>has by value</description>
-<source_reference file="sda.cpp" line="258" />
+<source_reference file="sda.cpp" line="471" />
 </extent>
 </supplier_module>
 </module>

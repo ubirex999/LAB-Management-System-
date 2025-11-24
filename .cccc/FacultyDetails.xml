@@ -2,7 +2,7 @@
 <!--Detailed report on module FacultyDetails-->
 <CCCC_Project>
 <module_summary>
-<lines_of_code value="18" level="0" />
+<lines_of_code value="10" level="0" />
 <lines_of_code_per_member_function value="******" level="0" />
 <McCabes_cyclomatic_complexity value="0" level="0" />
 <McCabes_cyclomatic_complexity_per_member_function value="******" level="0" />
@@ -10,8 +10,8 @@
 <lines_of_code_per_member_function value="********" level="0" />
 <lines_of_code_per_line_of_comment value="------" level="0" />
 <McCabes_cyclomatic_complexity_per_line_of_comment value="------" level="0" />
-<weighted_methods_per_class_unity value="5" level="0" />
-<weighted_methods_per_class_visibility value="5" level="0" />
+<weighted_methods_per_class_unity value="6" level="0" />
+<weighted_methods_per_class_visibility value="6" level="0" />
 <depth_of_inheritance_tree value="0" level="0" />
 <number_of_children value="0" level="0" />
 <coupling_between_objects value="2" level="0" />
@@ -24,14 +24,7 @@
 </module_summary>
 <module_detail>
 <description>definition</description>
-<source_reference file="sda.cpp" line="244" />
-<lines_of_code value="4" level="0" />
-<McCabes_cyclomatic_complexity value="0" level="0" />
-<lines_of_comment value="0" level="0" />
-<lines_of_code_per_line_of_comment value="------" level="0" />
-<McCabes_cyclomatic_complexity_per_line_of_comment value="------" level="0" />
-<description>definition</description>
-<source_reference file="sda.cpp" line="244" />
+<source_reference file="sda.cpp" line="456" />
 <lines_of_code value="4" level="0" />
 <McCabes_cyclomatic_complexity value="0" level="0" />
 <lines_of_comment value="0" level="0" />
@@ -43,13 +36,9 @@
 <name>AddTA(const TeachingAssistant &amp;)</name>
 <extent>
 <description>declaration</description>
-<source_reference file="sda.cpp" line="248" />
+<source_reference file="sda.cpp" line="460" />
 </extent>
-<extent>
-<description>declaration</description>
-<source_reference file="sda.cpp" line="248" />
-</extent>
-<lines_of_code value="2" level="0" />
+<lines_of_code value="1" level="0" />
 <McCabes_cyclomatic_complexity value="0" level="0" />
 <lines_of_comment value="0" level="0" />
 <lines_of_code_per_line_of_comment value="------" level="0" />
@@ -59,13 +48,9 @@
 <name>AddTeacher(const UniversityTeacher &amp;)</name>
 <extent>
 <description>declaration</description>
-<source_reference file="sda.cpp" line="247" />
+<source_reference file="sda.cpp" line="459" />
 </extent>
-<extent>
-<description>declaration</description>
-<source_reference file="sda.cpp" line="247" />
-</extent>
-<lines_of_code value="2" level="0" />
+<lines_of_code value="1" level="0" />
 <McCabes_cyclomatic_complexity value="0" level="0" />
 <lines_of_comment value="0" level="0" />
 <lines_of_code_per_line_of_comment value="------" level="0" />
@@ -75,13 +60,9 @@
 <name>FindTA(int)</name>
 <extent>
 <description>declaration</description>
-<source_reference file="sda.cpp" line="250" />
+<source_reference file="sda.cpp" line="462" />
 </extent>
-<extent>
-<description>declaration</description>
-<source_reference file="sda.cpp" line="250" />
-</extent>
-<lines_of_code value="2" level="0" />
+<lines_of_code value="1" level="0" />
 <McCabes_cyclomatic_complexity value="0" level="0" />
 <lines_of_comment value="0" level="0" />
 <lines_of_code_per_line_of_comment value="------" level="0" />
@@ -91,29 +72,33 @@
 <name>FindTeacher(int)</name>
 <extent>
 <description>declaration</description>
-<source_reference file="sda.cpp" line="249" />
+<source_reference file="sda.cpp" line="461" />
 </extent>
-<extent>
-<description>declaration</description>
-<source_reference file="sda.cpp" line="249" />
-</extent>
-<lines_of_code value="2" level="0" />
+<lines_of_code value="1" level="0" />
 <McCabes_cyclomatic_complexity value="0" level="0" />
 <lines_of_comment value="0" level="0" />
 <lines_of_code_per_line_of_comment value="------" level="0" />
 <McCabes_cyclomatic_complexity_per_line_of_comment value="------" level="0" />
 </member_function>
 <member_function>
-<name>SeedData()</name>
+<name>GetAllTAs()</name>
 <extent>
 <description>declaration</description>
-<source_reference file="sda.cpp" line="251" />
+<source_reference file="sda.cpp" line="464" />
 </extent>
+<lines_of_code value="1" level="0" />
+<McCabes_cyclomatic_complexity value="0" level="0" />
+<lines_of_comment value="0" level="0" />
+<lines_of_code_per_line_of_comment value="------" level="0" />
+<McCabes_cyclomatic_complexity_per_line_of_comment value="------" level="0" />
+</member_function>
+<member_function>
+<name>GetAllTeachers()</name>
 <extent>
 <description>declaration</description>
-<source_reference file="sda.cpp" line="251" />
+<source_reference file="sda.cpp" line="463" />
 </extent>
-<lines_of_code value="2" level="0" />
+<lines_of_code value="1" level="0" />
 <McCabes_cyclomatic_complexity value="0" level="0" />
 <lines_of_comment value="0" level="0" />
 <lines_of_code_per_line_of_comment value="------" level="0" />
@@ -131,22 +116,14 @@
 <concrete>false</concrete>
 <extent>
 <description>pass by reference</description>
-<source_reference file="sda.cpp" line="248" />
-</extent>
-<extent>
-<description>pass by reference</description>
-<source_reference file="sda.cpp" line="248" />
+<source_reference file="sda.cpp" line="460" />
 </extent>
 <name>UniversityTeacher</name>
 <visible>true</visible>
 <concrete>false</concrete>
 <extent>
 <description>pass by reference</description>
-<source_reference file="sda.cpp" line="247" />
-</extent>
-<extent>
-<description>pass by reference</description>
-<source_reference file="sda.cpp" line="247" />
+<source_reference file="sda.cpp" line="459" />
 </extent>
 </supplier_module>
 </module>
